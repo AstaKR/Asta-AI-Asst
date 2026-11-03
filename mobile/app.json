@@ -1,0 +1,107 @@
+{
+  "expo": {
+    "name": "AI Call Translator",
+    "slug": "asta-ai-transuator",
+    "scheme": "aicalltranslator",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.aicalltranslator.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "The microphone is used to send your voice in calls so it can be translated.",
+        "UIBackgroundModes": [
+          "audio",
+          "voip"
+        ],
+        "NSCameraUsageDescription": "The camera is used in video calls so the other person can see you."
+      },
+      "bitcode": false
+    },
+    "android": {
+      "package": "com.aicalltranslator.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#312E81",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      [
+        "@livekit/react-native-expo-plugin",
+        {
+          "android": {
+            "audioType": "communication"
+          }
+        }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "The microphone is used to send your voice in calls so it can be translated.",
+          "cameraPermission": "The camera is used in video calls so the other person can see you."
+        }
+      ],
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "The microphone is used to record meetings and send your voice in calls so it can be translated.",
+          "enableBackgroundRecording": false
+        }
+      ],
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Photos you choose are read so their text can be translated.",
+          "cameraPermission": "The camera is used in video calls and to photograph text for translation."
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "0affa403-7f41-4700-89ae-c4ca1a0a89d5"
+      }
+    },
+    "owner": "levelup-systems"
+  }
+}

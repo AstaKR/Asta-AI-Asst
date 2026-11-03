@@ -1,0 +1,4 @@
+# One virtualenv for the backend, the translation worker and the integration scripts.
+-r backend/requirements.txt
+-r translation_worker/requirements.txt
+numpy>=2  # integration scripts (tone analysis)

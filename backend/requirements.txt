@@ -1,0 +1,17 @@
+Django>=5.2,<7
+djangorestframework>=3.16
+django-cors-headers>=4.7
+dj-database-url>=2.3
+python-dotenv>=1.1
+livekit-api>=1.0
+# Meetings: audio decoding/transcoding, HTTP clients, AI summaries, Word export
+av>=14
+numpy>=2
+httpx>=0.27
+anthropic>=2.3
+cryptography>=44  # Fernet encryption of provider API keys stored from the admin page
+python-docx>=1.1
+# PostgreSQL driver for production (optional locally):
+# psycopg[binary]>=3.2
+pytest>=8
+pytest-django>=4.9

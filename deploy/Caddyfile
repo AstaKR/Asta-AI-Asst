@@ -1,0 +1,33 @@
+# {$APP_DOMAIN} e.g. call.example.com — Caddy obtains and renews the HTTPS certificate automatically.
+{$APP_DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 210MB
+	}
+
+	# API and Django admin -> backend
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /admin/* {
+		reverse_proxy backend:8000
+	}
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+
+	# React single-page app
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		Permissions-Policy "camera=(), geolocation=(), microphone=(self)"
+	}
+}

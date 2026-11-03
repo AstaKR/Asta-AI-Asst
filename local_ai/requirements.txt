@@ -1,0 +1,15 @@
+# Local AI service — install into its own virtualenv (Python 3.12):
+#   py -3.12 -m venv .venv-localai
+#   .venv-localai\Scripts\python -m pip install -r local_ai/requirements.txt
+# IndicTransToolkit is built from source: needs Microsoft C++ Build Tools on Windows.
+torch
+transformers==4.46.1  # pinned by parler-tts
+sentencepiece
+sacremoses
+IndicTransToolkit==1.1.1
+faster-whisper>=1.2
+parler-tts @ git+https://github.com/huggingface/parler-tts.git
+soundfile
+numpy
+aiohttp>=3.9
+python-dotenv

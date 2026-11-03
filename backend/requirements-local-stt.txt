@@ -1,0 +1,2 @@
+# Optional free local transcription engine (MEETING_STT_ENGINE=local). CPU works; slow on small laptops.
+faster-whisper>=1.2
