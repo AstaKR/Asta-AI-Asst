@@ -1,8 +1,10 @@
-# Own-server add-on: free local AI (local_ai + Ollama) and HTTPS for a self-hosted LiveKit.
-# Use together with the main file and the LiveKit file (see deploy/SELF_HOSTED.md):
+# Own-server add-on: free local AI (local_ai + Ollama). See deploy/SELF_HOSTED.md.
 #
 #   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.selfhosted.yml --env-file .env up -d --build
-#   docker compose -f deploy/docker-compose.livekit.yml --env-file .env up -d
+#
+# Calls use LiveKit Cloud by default (LIVEKIT_URL=wss://<project>.livekit.cloud): nothing else to run.
+# Self-hosted LiveKit instead: also start deploy/docker-compose.livekit.yml and set in .env
+#   CADDYFILE=Caddyfile.selfhosted  LIVEKIT_DOMAIN=livekit.yourdomain.in  LIVEKIT_WORKER_URL=ws://host.docker.internal:7880
 
 services:
   local-ai:
@@ -48,16 +50,17 @@ services:
   worker:
     environment:
       LOCAL_AI_URL: http://local-ai:8090
-      # LiveKit runs on the host network (docker-compose.livekit.yml); reach it without leaving the server.
-      LIVEKIT_WORKER_URL: ws://host.docker.internal:7880
+      # Empty = use LIVEKIT_URL (LiveKit Cloud). Self-hosted LiveKit on the host network: ws://host.docker.internal:7880
+      LIVEKIT_WORKER_URL: ${LIVEKIT_WORKER_URL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   web:
     environment:
-      LIVEKIT_DOMAIN: ${LIVEKIT_DOMAIN:?set LIVEKIT_DOMAIN in .env}
+      LIVEKIT_DOMAIN: ${LIVEKIT_DOMAIN:-}
     volumes:
-      - ./Caddyfile.selfhosted:/etc/caddy/Caddyfile:ro
+      # Caddyfile = the app only (LiveKit Cloud); Caddyfile.selfhosted adds HTTPS for a self-hosted LiveKit.
+      - ./${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

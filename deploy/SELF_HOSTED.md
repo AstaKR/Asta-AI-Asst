@@ -2,8 +2,9 @@
 
 Target: **2 × Intel Xeon Silver 4110 (16 cores / 32 threads), 64 GB RAM, 2.1 TB RAID 5, no GPU.**
 
-Everything runs on this one machine: web app, API, database, meeting jobs, call worker, LiveKit (calls), and the
-free AI models. Sarvam/Claude stay available as optional cloud engines.
+This machine runs the web app, API, database, meeting jobs, call worker and the free AI models. Call audio goes
+through **LiveKit Cloud** (project "Asta AI", free Build plan), so the server needs no call ports.
+Sarvam/Claude stay available as optional cloud engines. (Running LiveKit on this server instead is described at the end.)
 
 > Status: these files are written and the YAML is validated, but they have **not been run on a Linux server yet**.
 > The first deployment is the test — go step by step and check each one.
@@ -12,13 +13,13 @@ free AI models. Sarvam/Claude stay available as optional cloud engines.
 
 | Part | RAM | Note |
 |---|---|---|
-| Postgres, Django, worker, Caddy, LiveKit, Redis | ~4 GB | |
+| Postgres, Django, worker, Caddy | ~3 GB | |
 | IndicTrans2 (3 models) | ~4 GB | |
 | Whisper `large-v3-turbo` (meetings) + `small` (live) | ~4 GB | much better Tamil than the laptop's `small` |
 | Indic Parler-TTS | ~4 GB | |
 | Qwen3 30B-A3B Instruct summaries + assistant chat (Ollama) | ~20 GB | Apache-2.0; uses ~3B parameters per word, so it is fast on CPU |
 | Qwen3-VL 8B Instruct photo translate (Ollama) | ~7 GB | Apache-2.0; loaded only while used |
-| **Total** | **~43 GB of 64 GB** | room for the OS, file cache and growth |
+| **Total** | **~42 GB of 64 GB** | room for the OS, file cache and growth |
 
 **Speed:** this is a CPU-only server, and the Xeon 4110 runs at 2.1 GHz. It has many cores, but each core is slower
 than a modern laptop's. Expect meetings and the Translate page to work well (batch work, seconds per request).
@@ -28,21 +29,21 @@ slowest part. Measure it after setup (step 9). If it's too slow, either keep `SP
 
 **RAID 5** protects against one failed disk — it is **not a backup**. See step 10.
 
-## 2. Network requirements (most important)
+## 2. Network and accounts
 
-Calls use WebRTC, which needs the server reachable from the internet on these ports:
+With LiveKit Cloud, phones send call audio to LiveKit, not to this server. The server only needs:
 
 | Port | Use |
 |---|---|
-| 80, 443 TCP | website, API, HTTPS certificates, LiveKit signalling (wss) |
-| 7881 TCP | LiveKit media over TCP (fallback) |
-| 50000–60000 UDP | LiveKit media (voice/video) |
-| 5060 UDP/TCP, 10000–20000 UDP | only for phone calls (SIP) — restrict to your provider's IPs |
+| 80, 443 TCP (inbound) | website, API, HTTPS certificates |
+| outbound HTTPS/WSS | the worker connects out to LiveKit Cloud; models download from Hugging Face and Ollama |
 
 You need:
-* **A static public IP** on the server, or your router/firewall forwarding the ports above to it.
-  (Cloudflare Tunnel and similar do **not** carry UDP call media.)
-* **Two DNS names** pointing to that IP, e.g. `call.levelupsystems.in` (app) and `livekit.levelupsystems.in` (calls).
+* **A public IP** on the server (static is best), or your router forwarding ports 80 and 443 to it.
+* **One DNS name** pointing to that IP, e.g. `call.levelupsystems.in`.
+* **LiveKit Cloud API key:** cloud.livekit.io → project "Asta AI" → Settings → API keys → create a key. Note the
+  project URL (`wss://….livekit.cloud`), the API key and the API secret. Never paste the secret anywhere but `.env`.
+* **Hugging Face read token** with the four AI4Bharat model terms accepted (docs/LOCAL_AI.md step 2).
 
 ## 3. Install the operating system
 
@@ -65,8 +66,6 @@ sudo usermod -aG docker $USER && newgrp docker
 
 sudo ufw allow OpenSSH
 sudo ufw allow 80,443/tcp
-sudo ufw allow 7881/tcp
-sudo ufw allow 50000:60000/udp
 sudo ufw enable
 ```
 
@@ -89,76 +88,45 @@ git config core.sshCommand "ssh -i ~/.ssh/asta_deploy"
 
 ## 6. Production `.env`
 
+A script creates `.env` from `deploy/production.env.example`, fills every secret with a new random value and sets
+your domain:
+
 ```bash
-cp .env.example .env
+bash deploy/make-env.sh call.levelupsystems.in
 nano .env
 ```
 
-Generate every secret with `openssl rand -base64 48`. Set:
-
-```ini
-APP_DOMAIN=call.levelupsystems.in
-LIVEKIT_DOMAIN=livekit.levelupsystems.in
-
-DJANGO_DEBUG=false
-DJANGO_SECRET_KEY=<random>
-DJANGO_ALLOWED_HOSTS=call.levelupsystems.in,backend
-CORS_ALLOWED_ORIGINS=https://call.levelupsystems.in
-CSRF_TRUSTED_ORIGINS=https://call.levelupsystems.in
-POSTGRES_PASSWORD=<random>
-SECRETS_ENCRYPTION_KEY=<python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">
-WORKER_SHARED_SECRET=<random>
-
-# Self-hosted LiveKit
-LIVEKIT_URL=wss://livekit.levelupsystems.in
-LIVEKIT_API_KEY=<random, letters only, e.g. APIabc123>
-LIVEKIT_API_SECRET=<random, 32+ chars>
-
-# Free local AI
-LOCAL_AI_SECRET=<random>
-HF_TOKEN=<Hugging Face read token — see docs/LOCAL_AI.md step 2>
-AI_ENGINE=local
-MEETING_STT_ENGINE=local
-SUMMARY_PROVIDER=ollama
-OLLAMA_MODEL=qwen3:30b-instruct
-ASSISTANT_PROVIDER=ollama
-ASSISTANT_VISION_MODEL=qwen3-vl:8b-instruct
-SPEECH_PROVIDER=sarvam        # switch to local after measuring call delay (step 9)
-SARVAM_API_KEY=               # optional; or add it later on Admin → API keys
-SMS_BACKEND=disabled
-```
+In `nano`, fill the values it lists: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (from LiveKit Cloud),
+`HF_TOKEN`, and `SARVAM_API_KEY` if you use Sarvam for live calls. Save with Ctrl+O, exit with Ctrl+X.
+The defaults already use the free local AI (`AI_ENGINE=local`, `SUMMARY_PROVIDER=ollama`, `ASSISTANT_PROVIDER=ollama`)
+and Sarvam for live calls (`SPEECH_PROVIDER=sarvam`, switch after step 9).
 
 The server is the only place this file exists — keep a copy of it in a password manager.
 
 ## 7. Start everything
 
 ```bash
-# Calls: LiveKit + Redis (+ SIP) on the host network
-docker compose -f deploy/docker-compose.livekit.yml --env-file .env up -d
+echo 'alias asta="docker compose -f ~/asta/deploy/docker-compose.yml -f ~/asta/deploy/docker-compose.selfhosted.yml --env-file ~/asta/.env"' >> ~/.bashrc && source ~/.bashrc
 
 # App + database + jobs + worker + local AI + Ollama (first build takes 15–30 minutes)
-docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.selfhosted.yml --env-file .env up -d --build
+asta up -d --build
 
 # Summary/assistant and photo models (about 25 GB download, once). Use the -instruct tags.
-docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.selfhosted.yml exec ollama ollama pull qwen3:30b-instruct
-docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.selfhosted.yml exec ollama ollama pull qwen3-vl:8b-instruct
-```
-
-Tip: save the long command as an alias:
-
-```bash
-echo 'alias asta="docker compose -f ~/asta/deploy/docker-compose.yml -f ~/asta/deploy/docker-compose.selfhosted.yml --env-file ~/asta/.env"' >> ~/.bashrc && source ~/.bashrc
+asta exec ollama ollama pull qwen3:30b-instruct
+asta exec ollama ollama pull qwen3-vl:8b-instruct
 asta ps
 ```
+
+`asta logs worker` should show that the worker registered with LiveKit Cloud.
 
 ## 8. First-time setup
 
 ```bash
-asta exec backend python manage.py createsuperuser                 # Django admin login
-asta exec backend python manage.py grant_admin --phone +91XXXXXXXXXX  # make your app account an admin
+asta exec backend python manage.py createsuperuser                      # Django admin login (optional)
+asta exec backend python manage.py grant_admin --username YOUR_USERNAME   # after registering in the web app
 ```
 
-Open `https://call.levelupsystems.in` and sign in. Check:
+Open `https://call.levelupsystems.in`, register an account, run `grant_admin` for it, and refresh. Check:
 
 ```bash
 curl https://call.levelupsystems.in/api/health/
@@ -209,7 +177,23 @@ APK (see `mobile/README.md`).
 | Problem | Check |
 |---|---|
 | Site doesn't open / no HTTPS | DNS points to the server; ports 80/443 reach it; `asta logs web` |
-| Calls connect but no audio | UDP 50000–60000 open end-to-end (router too); `use_external_ip` needs the public IP |
+| Calls do not connect | `asta logs worker` shows it registered; `LIVEKIT_URL`/key/secret match LiveKit Cloud → API keys |
+| Calls stop working one day | LiveKit Cloud → Usage and limits: the free Build plan's monthly allowance may be used up |
 | "Local AI … not available" | `asta logs local-ai`; Hugging Face terms accepted for all four models; `HF_TOKEN` set |
 | Summaries fail | `asta exec ollama ollama list` shows `qwen3:30b-instruct` |
 | Server slow | `docker stats`; lower `LOCAL_MT_BEAMS` to 1 or use `LOCAL_WHISPER_MODEL=medium` |
+
+## Optional: run LiveKit on this server instead of LiveKit Cloud
+
+Only if you prefer not to use LiveKit Cloud. It needs a static public IP, a second DNS name and more open ports
+(7881/tcp, 50000–60000/udp; for phone calls 5060 and 10000–20000/udp, restricted to the provider's IPs).
+
+```bash
+bash deploy/make-env.sh call.levelupsystems.in livekit.levelupsystems.in   # sets the self-hosted values
+sudo ufw allow 7881/tcp && sudo ufw allow 50000:60000/udp
+docker compose -f deploy/docker-compose.livekit.yml --env-file .env up -d
+asta up -d --build
+```
+
+The script then sets `LIVEKIT_URL=wss://livekit…`, its own key pair, `CADDYFILE=Caddyfile.selfhosted` (HTTPS for
+LiveKit) and `LIVEKIT_WORKER_URL=ws://host.docker.internal:7880`.
