@@ -15,7 +15,8 @@ from billing import limits as plan_limits
 from meetings.errors import ProviderError
 from meetings.languages import MEETING_LANGUAGES
 
-from .claude import AssistantClient, assistant_enabled
+from . import claude
+from .claude import assistant_enabled
 from .models import AssistantUsage
 
 log = logging.getLogger(__name__)
@@ -77,7 +78,10 @@ class _AssistantView(APIView):
 
     def _guard(self, request):
         if not assistant_enabled():
-            return Response({"detail": "The assistant is not configured on the server (ANTHROPIC_API_KEY).", "code": "not_configured"}, status=503)
+            return Response(
+                {"detail": "The assistant is not configured on the server (ANTHROPIC_API_KEY or ASSISTANT_PROVIDER=ollama).", "code": "not_configured"},
+                status=503,
+            )
         if message := limit_reached(request.user):
             return Response({"detail": message, "code": "budget"}, status=429)
         try:
@@ -100,6 +104,7 @@ class AssistantConfigView(APIView):
         return Response(
             {
                 "enabled": assistant_enabled(),
+                "provider": settings.ASSISTANT_PROVIDER,
                 "max_image_mb": settings.ASSISTANT_MAX_IMAGE_MB,
                 "daily_requests_per_user": settings.ASSISTANT_DAILY_REQUESTS_PER_USER,
             }
@@ -113,7 +118,7 @@ class AssistantChatView(_AssistantView):
         if blocked := self._guard(request):
             return blocked
         try:
-            reply, usage = AssistantClient().chat([dict(m) for m in s.validated_data["messages"]], s.validated_data["language"])
+            reply, usage = claude.get_assistant().chat([dict(m) for m in s.validated_data["messages"]], s.validated_data["language"])
         except ProviderError as exc:
             return self._provider_error(exc)
         self._record(request, AssistantUsage.Kind.CHAT, usage)
@@ -136,7 +141,7 @@ class AssistantImageView(_AssistantView):
         if blocked := self._guard(request):
             return blocked
         try:
-            result, usage = AssistantClient().read_image(data, media_type, s.validated_data["language"])
+            result, usage = claude.get_assistant().read_image(data, media_type, s.validated_data["language"])
         except ProviderError as exc:
             return self._provider_error(exc)
         self._record(request, AssistantUsage.Kind.IMAGE, usage)

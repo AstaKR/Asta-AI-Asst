@@ -209,6 +209,7 @@ export interface QuickResult {
 
 export interface AssistantConfig {
   enabled: boolean;
+  provider: "anthropic" | "ollama";
   max_image_mb: number;
   daily_requests_per_user: number;
 }

@@ -8,7 +8,9 @@ Sarvam and Claude stay available; each job is switched with a setting.
 | Translation | AI4Bharat **IndicTrans2** distilled (200M en↔indic, 320M indic↔indic) | MIT | ✓ | ✓ | ✓ |
 | Speech-to-text | **faster-whisper** (`small` for meetings, `base` for live turns) | MIT | weak | ✓ | ✓ |
 | Speech (TTS) | AI4Bharat **Indic Parler-TTS** (0.9B) | Apache-2.0 | ✓ (voice "Jaya") | ✓ ("Divya", "Rohit") | ✓ ("Mary", "Thoma") |
-| Summaries | **Qwen3 4B** via Ollama | Apache-2.0 | basic | basic | ✓ |
+| Summaries | **Qwen3 4B Instruct** via Ollama | Apache-2.0 | basic | basic | ✓ |
+| Assistant chat | **Qwen3 4B Instruct** via Ollama (`ASSISTANT_PROVIDER=ollama`) | Apache-2.0 | basic | basic | ✓ |
+| Photo translate | **Qwen3-VL 4B Instruct** via Ollama (`ASSISTANT_VISION_MODEL`) | Apache-2.0 | to test | to test | ✓ |
 
 Not used: **Piper** has no Tamil voice and is GPL-3.0. **MMS-TTS** is non-commercial (CC-BY-NC).
 
@@ -39,7 +41,10 @@ the main Python 3.14 environment. Nothing sent to the service is stored or sent 
      The token is stored in your user profile, not in this project.
 3. Start the service: `.venv-localai\Scripts\python -m local_ai.server` (or "local-ai" in `.claude/launch.json`).
    Check `http://127.0.0.1:8090/health`. Models download on first use (about 1 GB each, Parler ~3.7 GB).
-4. Summaries: install Ollama (`winget install Ollama.Ollama`), then `ollama pull qwen3:4b`.
+4. Summaries, assistant and photo translate: install Ollama (`winget install Ollama.Ollama`), then
+   `ollama pull qwen3:4b-instruct` and `ollama pull qwen3-vl:4b-instruct` (on a 64 GB server: `qwen3:30b-instruct` and
+   `qwen3-vl:8b-instruct`). Use the **instruct** tags: the plain `qwen3:4b` / `qwen3-vl:4b` tags are "thinking" builds
+   that write long reasoning before answering, which is far too slow on a CPU.
 5. `.env`:
    ```
    LOCAL_AI_URL=http://127.0.0.1:8090
@@ -47,6 +52,7 @@ the main Python 3.14 environment. Nothing sent to the service is stored or sent 
    # TRANSLATE_ENGINE=local  STT_ENGINE=local  TTS_ENGINE=local
    MEETING_STT_ENGINE=local   # meeting transcription
    SUMMARY_PROVIDER=ollama    # meeting notes
+   ASSISTANT_PROVIDER=ollama  # assistant chat + photo translate (JPEG/PNG)
    SPEECH_PROVIDER=local      # live calls (call worker)
    ```
    Restart the backend and worker after changing `.env`. `GET /api/ai/capabilities/` shows what each job uses and

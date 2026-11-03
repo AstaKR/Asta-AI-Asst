@@ -16,7 +16,7 @@ export function defaultMeetingSetup(spoken = "ta"): MeetingSetupValue {
 }
 
 export const CONSENT_TEXT =
-  "Everyone recorded agreed to the recording, its storage on our server, and its processing by AI (Sarvam AI for speech and translation; Claude for notes if used). It is kept until I delete it.";
+  "Everyone recorded agreed to the recording, its storage on our server, and its processing by AI (on our own server, or by Sarvam AI and Anthropic Claude when those services are used). It is kept until I delete it.";
 
 function Chips({ options, value, onChange }: { options: { code: string; label: string }[]; value: string; onChange: (v: string) => void }) {
   return (

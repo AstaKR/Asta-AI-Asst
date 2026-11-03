@@ -54,7 +54,11 @@ class OverviewView(APIView):
         calls = _by_day(CallUsage.objects.filter(room__created_at__gte=since), "room__created_at", stt=Sum("stt_seconds"), tr=Sum("translate_chars"), tts=Sum("tts_chars"))
         meetings = _by_day(Meeting.objects.filter(created_at__gte=since), "created_at", stt=Sum("stt_seconds"), tr=Sum("translate_chars"), n=Count("id"))
         quick = _by_day(QuickUsage.objects.filter(created_at__gte=since), "created_at", stt=Sum("stt_seconds"), tr=Sum("translate_chars"), tts=Sum("tts_chars"), n=Count("id"))
-        claude = _by_day(AssistantUsage.objects.filter(created_at__gte=since), "created_at", i=Sum("input_tokens"), o=Sum("output_tokens"), n=Count("id"))
+        # Local (Ollama) assistant requests are counted but cost nothing.
+        paid = ~Q(model__startswith="ollama:")
+        claude = _by_day(
+            AssistantUsage.objects.filter(created_at__gte=since), "created_at", i=Sum("input_tokens", filter=paid), o=Sum("output_tokens", filter=paid), n=Count("id")
+        )
         rooms = _by_day(CallRoom.objects.filter(created_at__gte=since, started_at__isnull=False), "created_at", n=Count("id"))
         users = _by_day(User.objects.filter(date_joined__gte=since), "date_joined", n=Count("id"))
         phones = _by_day(PhoneCall.objects.filter(created_at__gte=since), "created_at", n=Count("id"))

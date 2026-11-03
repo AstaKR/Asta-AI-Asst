@@ -18,7 +18,7 @@ const SUGGESTIONS = [
 const MAX_HISTORY = 19;
 const MAX_SPEAK_CHARS = 1000;
 
-/** AI language assistant (Claude). The conversation stays on the phone; the server does not store it. */
+/** AI language assistant (Claude, or a local model on the server). The conversation stays on the phone; the server does not store it. */
 export default function AssistantScreen() {
   const [config, setConfig] = useState<AssistantConfig | null>(null);
   const [language, setLanguage] = useState("en");

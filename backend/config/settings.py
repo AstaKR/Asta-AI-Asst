@@ -269,7 +269,7 @@ SUMMARY_EFFORT = env("SUMMARY_EFFORT", "medium")
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "").strip()
 # SUMMARY_PROVIDER=ollama: a local model served by Ollama (free). Qwen3 models are Apache-2.0.
 OLLAMA_URL = env("OLLAMA_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = env("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_MODEL = env("OLLAMA_MODEL", "qwen3:4b-instruct")  # instruct = answers directly (plain qwen3:4b is a "thinking" build)
 OLLAMA_TIMEOUT_SECONDS = float(env("OLLAMA_TIMEOUT_SECONDS", "600"))
 # Encrypts provider API keys saved from the admin page (Fernet key; generate with
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())").
@@ -298,6 +298,12 @@ QUICK_TTS_SAMPLE_RATE = env_int("SARVAM_TTS_SAMPLE_RATE", 24000)
 
 # ---------- AI assistant (chat + photo translation, Claude) ----------
 # Uses ANTHROPIC_API_KEY. Opus 5.5 at low effort costs roughly Rs 1 per chat reply; claude-haiku-5-5 costs less.
+# Assistant chat + photo translate: anthropic (Claude, needs a key) | ollama (local, free; see docs/LOCAL_AI.md)
+ASSISTANT_PROVIDER = env("ASSISTANT_PROVIDER", "anthropic")
+ASSISTANT_OLLAMA_MODEL = env("ASSISTANT_OLLAMA_MODEL", OLLAMA_MODEL)
+ASSISTANT_VISION_MODEL = env("ASSISTANT_VISION_MODEL", "qwen3-vl:4b-instruct")  # Apache-2.0; qwen3-vl:8b-instruct on a big server
+# Local models are slow on CPU: cap reply length so one answer cannot run for minutes.
+ASSISTANT_OLLAMA_MAX_TOKENS = env_int("ASSISTANT_OLLAMA_MAX_TOKENS", 700)
 ASSISTANT_MODEL = env("ASSISTANT_MODEL", "claude-opus-5-5")
 ASSISTANT_EFFORT = env("ASSISTANT_EFFORT", "low")
 ASSISTANT_MAX_TOKENS = env_int("ASSISTANT_MAX_TOKENS", 4000)

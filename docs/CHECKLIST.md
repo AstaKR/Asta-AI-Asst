@@ -109,3 +109,4 @@ Legend: [x] done & verified · [~] implemented, verification pending (needs cred
 - [ ] Tamil speech recognition quality with Whisper (real speakers)
 - [ ] Live local call latency on target hardware (expect several seconds per turn without a GPU)
 - [ ] Speaker diarization (not available locally; transcripts show no speaker rather than a guess)
+- [x] Local assistant chat + photo translate (`ASSISTANT_PROVIDER=ollama`, Qwen3 + Qwen3-VL); local requests counted but not priced

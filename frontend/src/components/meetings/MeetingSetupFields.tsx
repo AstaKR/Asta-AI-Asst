@@ -62,4 +62,4 @@ export function MeetingSetupFields({
 }
 
 export const CONSENT_TEXT =
-  "Everyone in this recording has agreed to it being recorded, stored on our server, and processed by AI services (Sarvam AI for speech and translation; Anthropic Claude for summaries if used). It is kept until I delete it.";
+  "Everyone in this recording has agreed to it being recorded, stored on our server, and processed by AI (on our own server, or by Sarvam AI and Anthropic Claude when those services are used). It is kept until I delete it.";
