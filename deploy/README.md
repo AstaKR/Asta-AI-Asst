@@ -1,5 +1,7 @@
 # Deploying to a cloud server
 
+> Own server with free local AI (no paid AI keys)? Follow [SELF_HOSTED.md](SELF_HOSTED.md) instead.
+
 Status: these files are written and the Django production settings pass `manage.py check --deploy`, but the Docker
 build itself has **not been run yet** (Docker isn't installed on the development PC). The first deployment is the test.
 

@@ -45,6 +45,8 @@ class TextToSpeech:
             from transformers import AutoTokenizer
         except ImportError as exc:
             raise ModelUnavailable("Local text-to-speech is not installed (parler-tts).") from exc
+        if self.cfg.torch_threads:
+            torch.set_num_threads(self.cfg.torch_threads)
         dtype = torch.bfloat16 if self.cfg.tts_dtype == "bfloat16" else torch.float32
         try:
             model = ParlerTTSForConditionalGeneration.from_pretrained(self.cfg.tts_model, torch_dtype=dtype)

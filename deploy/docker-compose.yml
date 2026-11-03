@@ -5,6 +5,8 @@
 #   cp .env.example .env      # then fill in production values (see deploy/README.md)
 #   docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
 
+name: asta
+
 services:
   db:
     image: postgres:17-alpine

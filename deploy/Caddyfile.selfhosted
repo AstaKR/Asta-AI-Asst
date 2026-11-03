@@ -1,0 +1,39 @@
+# Own server: the app site (as in deploy/Caddyfile) plus TLS for the self-hosted LiveKit.
+# {$APP_DOMAIN} e.g. call.example.com — Caddy obtains and renews the HTTPS certificate automatically.
+{$APP_DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 210MB
+	}
+
+	# API and Django admin -> backend
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /admin/* {
+		reverse_proxy backend:8000
+	}
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+
+	# React single-page app
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		Permissions-Policy "camera=(self), geolocation=(), microphone=(self)"
+	}
+}
+
+# {$LIVEKIT_DOMAIN} e.g. livekit.example.com -> LiveKit signalling on the host (wss://). Media (UDP) goes to LiveKit directly.
+{$LIVEKIT_DOMAIN} {
+	reverse_proxy host.docker.internal:7880
+}

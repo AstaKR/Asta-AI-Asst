@@ -8,6 +8,8 @@
 #   5060/udp+tcp (SIP — restrict to your provider's IPs), 10000-20000/udp (SIP media / RTP).
 # Then set LIVEKIT_URL=wss://<livekit domain> and LIVEKIT_WORKER_URL=ws://127.0.0.1:7880 in .env.
 
+name: asta-livekit
+
 services:
   redis:
     image: redis:7-alpine
