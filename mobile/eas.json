@@ -12,11 +12,11 @@
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://REPLACE-WITH-YOUR-BACKEND-DOMAIN" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://app.levelupsystems.shop" }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://REPLACE-WITH-YOUR-BACKEND-DOMAIN" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://app.levelupsystems.shop" }
     }
   }
 }
