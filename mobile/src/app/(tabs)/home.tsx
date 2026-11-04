@@ -69,7 +69,7 @@ export default function Home() {
         <Text style={{ fontSize: 26, fontWeight: "800", color: colors.ink }}>Hello{name ? `, ${name.split(" ")[0]}` : ""}</Text>
         <Muted style={{ marginBottom: 16 }}>Talk to anyone in Tamil, Hindi or English — translated live.</Muted>
         {error ? <Banner tone="danger">{error}</Banner> : null}
-        <IncomingCalls enabled={phoneEnabled} />
+        <IncomingCalls phoneEnabled={phoneEnabled} />
 
         <Card>
           <LanguagePicker value={sel} onChange={setSel} />
@@ -93,7 +93,7 @@ export default function Home() {
         </Card>
 
         <Card style={{ paddingVertical: 4 }}>
-          <ListItem icon="keypad" title="Call a phone number" subtitle="Both sides hear the translation" onPress={() => router.push("/dial")} last />
+          <ListItem icon="keypad" title="Dial" subtitle="Call someone by username or mobile number" onPress={() => router.push("/dial")} last />
         </Card>
 
         {rooms.length > 0 && (

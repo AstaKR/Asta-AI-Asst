@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 
 import { Banner, colors, Icon } from "../components/ui";
+import { useHandsFree } from "../hooks/useHandsFree";
 import { useQuickTranslate } from "../hooks/useQuickTranslate";
 import { MEETING_LANGUAGES } from "../lib/meetings";
 import type { QuickResult } from "../types";
@@ -11,14 +12,22 @@ const other = (s: Side): Side => (s === "top" ? "bottom" : "top");
 
 /**
  * Face-to-face: one phone on the table between two people. The top half is upside down so the
- * person opposite can read it. Each person holds their button, speaks, and the other side shows
- * (and speaks) the translation.
+ * person opposite can read it. Hold to talk: each person holds their button. Hands-free: the phone
+ * listens, works out who spoke from the language, and speaks the translation to the other person.
  */
 export default function FaceToFaceScreen() {
   const [lang, setLang] = useState<Record<Side, string>>({ top: "hi", bottom: "ta" });
   const [last, setLast] = useState<Partial<Record<Side, QuickResult>>>({});
   const [speak, setSpeak] = useState(true);
   const t = useQuickTranslate();
+  const [handsFree, setHandsFree] = useState(false);
+  const auto = useHandsFree((r) => setLast({ [lang.top === r.source_language ? "top" : "bottom"]: r }));
+  const locked = Boolean(t.recording || t.busy || auto.listening);
+
+  async function toggleMode(on: boolean) {
+    if (!on) await auto.stop();
+    setHandsFree(on);
+  }
 
   async function release(side: Side) {
     const result = await t.stop({ source_language: lang[side], target_language: lang[other(side)], speak });
@@ -37,7 +46,7 @@ export default function FaceToFaceScreen() {
             <Pressable
               key={l.code}
               onPress={() => setLang({ ...lang, [side]: l.code })}
-              disabled={Boolean(t.recording || t.busy)}
+              disabled={locked || l.code === lang[other(side)]}
               accessibilityRole="radio"
               accessibilityState={{ selected: lang[side] === l.code }}
               style={{
@@ -59,7 +68,7 @@ export default function FaceToFaceScreen() {
               <Text style={{ fontSize: 24, lineHeight: 34, fontWeight: "600", color: colors.ink, textAlign: "center" }}>{heard.translation}</Text>
             </Pressable>
           ) : said ? null : (
-            <Text style={{ color: colors.muted, textAlign: "center" }}>Hold the button and speak</Text>
+            <Text style={{ color: colors.muted, textAlign: "center" }}>{handsFree ? "Just speak — then pause" : "Hold the button and speak"}</Text>
           )}
           {said ? (
             <Text style={{ fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8 }} numberOfLines={3}>
@@ -67,6 +76,7 @@ export default function FaceToFaceScreen() {
             </Text>
           ) : null}
         </View>
+        {!handsFree && (
         <Pressable
           onPressIn={() => void t.start(side, () => void release(side))}
           onPressOut={() => void release(side)}
@@ -87,6 +97,7 @@ export default function FaceToFaceScreen() {
             <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>{isRec ? "Listening… release to translate" : isBusy ? "Translating…" : "Hold to speak"}</Text>
           </View>
         </Pressable>
+        )}
       </View>
     );
   };
@@ -94,13 +105,37 @@ export default function FaceToFaceScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       {half("top")}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 6, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line, backgroundColor: "#fff" }}>
-        <Text style={{ color: colors.muted }}>Speak translation aloud</Text>
-        <Switch value={speak} onValueChange={setSpeak} trackColor={{ true: colors.brand }} />
+      <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line, backgroundColor: "#fff", paddingVertical: 6, paddingHorizontal: 12, gap: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <Text style={{ color: colors.muted }}>Speak aloud</Text>
+          <Switch value={speak} onValueChange={setSpeak} disabled={auto.listening} trackColor={{ true: colors.brand }} />
+          <Text style={{ color: colors.muted }}>Hands-free</Text>
+          <Switch value={handsFree} onValueChange={(v) => void toggleMode(v)} disabled={Boolean(t.recording || t.busy)} trackColor={{ true: colors.brand }} />
+        </View>
+        {handsFree && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Pressable
+              onPress={() => void (auto.listening ? auto.stop() : auto.start(`${lang.bottom},${lang.top}`, speak))}
+              accessibilityRole="button"
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: auto.listening ? colors.danger : colors.brand }}
+            >
+              <Icon name={auto.listening ? "stop" : "mic"} size={18} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "700" }}>{auto.listening ? "Stop" : "Start listening"}</Text>
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.subtle, overflow: "hidden" }}>
+                <View style={{ height: 6, width: `${Math.max(0, Math.min(100, (auto.level + 60) * 1.7))}%`, backgroundColor: auto.hearing ? colors.danger : colors.accent }} />
+              </View>
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }} accessibilityLiveRegion="polite">
+                {!auto.listening ? "One person at a time, pause when done" : auto.busy ? "Translating…" : auto.hearing ? "Hearing someone…" : "Listening…"}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
-      {t.error ? (
+      {t.error || auto.error ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-          <Banner tone="danger">{t.error}</Banner>
+          <Banner tone="danger">{t.error || auto.error}</Banner>
         </View>
       ) : null}
       {half("bottom")}

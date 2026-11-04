@@ -15,7 +15,7 @@ import { ConnectionState, DisconnectReason, LocalVideoTrack, ParticipantKind, Ro
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { PermissionsAndroid, Platform, ScrollView, Share, Text, View } from "react-native";
 
-import { ApiError, api, phoneApi } from "../../api";
+import { ApiError, api, isMemberView, phoneApi, recordingApi } from "../../api";
 import { useAuth } from "../../auth";
 import { Banner, Button, Card, Chip, Muted, Screen, colors, styles } from "../../components/ui";
 import { effectiveLanguage, micAllowedIdentities, needsTranslation, originalVolume } from "../../lib/audioPolicy";
@@ -150,6 +150,15 @@ const ACTIVITY: Record<string, string> = {
   limit: "Translation stopped",
 };
 
+const DIRECT_TEXT: Record<string, string> = {
+  ringing: "Ringing…",
+  answered: "Answered — connecting…",
+  declined: "Declined the call",
+  missed: "Did not answer",
+  cancelled: "Call cancelled",
+  ended: "Call ended",
+};
+
 function CallView({ code, session, error }: { code: string; session: TokenResponse; error: string }) {
   const room = useRoomContext();
   const { user } = useAuth();
@@ -158,7 +167,7 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
   const remotes = useRemoteParticipants();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
   const [state, dispatch] = useReducer(translatorReducer, initialTranslatorState);
-  const [info] = useState<Room>(session.room);
+  const [info, setInfo] = useState<Room>(session.room);
   // Video calls default to the loudspeaker: the phone is held away from the ear.
   const [speaker, setSpeaker] = useState(false);
   const [facing, setFacing] = useState<"user" | "environment">("user");
@@ -176,6 +185,36 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
       room.off(RoomEvent.ParticipantAttributesChanged, bump);
     };
   }, [room]);
+
+  // Recording (voices + transcript) only when EVERY participant agrees. The server puts who has agreed
+  // into the room metadata, so the other person sees the request at once.
+  const readRecording = useCallback(() => {
+    try {
+      const m = JSON.parse(room.metadata || "{}") as { save_transcript?: boolean; record_consent?: string[]; record_audio?: boolean };
+      return { saving: Boolean(m.save_transcript), consented: m.record_consent ?? [], audio: Boolean(m.record_audio) };
+    } catch {
+      return { saving: false, consented: [] as string[], audio: false };
+    }
+  }, [room]);
+  const [recording, setRecording] = useState(readRecording);
+  const [declinedAsk, setDeclinedAsk] = useState("");
+  useEffect(() => {
+    const update = () => setRecording(readRecording());
+    update();
+    room.on(RoomEvent.RoomMetadataChanged, update);
+    return () => {
+      room.off(RoomEvent.RoomMetadataChanged, update);
+    };
+  }, [room, readRecording]);
+  const [recordError, setRecordError] = useState("");
+  async function setRecordConsent(save: boolean) {
+    setRecordError("");
+    try {
+      await recordingApi.consent(code, save);
+    } catch (err) {
+      setRecordError(err instanceof ApiError ? err.message : "Could not change call recording");
+    }
+  }
 
   useDataChannel("translator", (msg) => {
     if (msg.from && !msg.from.isAgent) return;
@@ -196,6 +235,20 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
   const translatorAvailable = info.translation_enabled && Boolean(agent) && !["disabled", "limit", "error"].includes(state.availability);
   const theyNeedTranslation = needsTranslation(mySpoken, otherListen) || (otherIsPhone && !otherListen);
   const origVolume = user?.preferences.original_voice_volume ?? 15;
+
+  const iConsented = recording.consented.includes(myIdentity);
+  const othersAsked = recording.consented.some((id) => id !== myIdentity);
+  const recordWhat = recording.audio ? "voices and transcript" : "transcript";
+
+  // App-to-app call from the dialer: follow ringing → answered / declined / missed until they join.
+  const ringing = Boolean(info.direct) && !other;
+  useEffect(() => {
+    if (!ringing) return;
+    const id = setInterval(() => {
+      api.room(code).then((r) => isMemberView(r) && setInfo(r)).catch(() => undefined);
+    }, 2000);
+    return () => clearInterval(id);
+  }, [ringing, code]);
 
   // Normal phone call bridged through LiveKit SIP: sip.callStatus is dialing → active → hangup.
   const phone = info.phone;
@@ -302,7 +355,20 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
         />
         <Chip label={`${clock(elapsed)} / ${clock(info.max_duration_seconds)}`} />
         {otherIsPhone && <Chip label="Phone call" tone="warn" />}
+        {recording.saving && <Chip label="● REC" tone="danger" />}
       </View>
+      {othersAsked && !iConsented && declinedAsk !== recording.consented.join() && (
+        <Card style={{ backgroundColor: colors.warnSoft, borderColor: "#fcd34d" }}>
+          <Text style={{ color: colors.ink, fontWeight: "600" }}>
+            {otherName} wants to record this call ({recordWhat}). It is saved only if you agree too.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            <Button label="No" variant="secondary" onPress={() => setDeclinedAsk(recording.consented.join())} style={{ flex: 1 }} />
+            <Button label="Agree" onPress={() => void setRecordConsent(true)} style={{ flex: 1 }} />
+          </View>
+        </Card>
+      )}
+      {recordError ? <Banner tone="danger">{recordError}</Banner> : null}
 
       {error ? <Banner tone="danger">{error}</Banner> : null}
       {state.availability === "limit" && <Banner tone="warn">Translation stopped (usage limit). You hear the original voice.</Banner>}
@@ -313,6 +379,14 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
         <Card>
           <Text style={styles.label}>{phone.direction === "outbound" ? "Calling" : "Connecting"} {phone.remote_number}</Text>
           <Muted>{other ? "Ringing… the call is translated once they answer." : "Dialling…"}</Muted>
+        </Card>
+      ) : !other && info.direct ? (
+        <Card>
+          <Text style={{ fontSize: 22, fontWeight: "700", color: colors.ink, textAlign: "center" }}>{info.direct.callee_name}</Text>
+          <Muted style={{ textAlign: "center", marginVertical: 8, color: ["ringing", "answered"].includes(info.direct.status) ? colors.muted : colors.danger }}>
+            {DIRECT_TEXT[info.direct.status] ?? info.direct.status}
+          </Muted>
+          {info.direct.status === "ringing" && <Button label="Cancel" variant="secondary" onPress={() => void endCall()} />}
         </Card>
       ) : !other ? (
         <Card>
@@ -408,6 +482,14 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
           style={{ flex: 1 }}
         />
         <Button label={speaker ? "Earpiece" : "Speaker"} variant="secondary" onPress={() => void toggleSpeaker()} style={{ flex: 1 }} />
+        {other && !otherIsPhone ? (
+          <Button
+            label={recording.saving ? "Stop rec" : iConsented ? "Waiting…" : othersAsked ? "Agree rec" : "Record"}
+            variant={recording.saving ? "danger" : "secondary"}
+            onPress={() => void setRecordConsent(!iConsented)}
+            style={{ flex: 1 }}
+          />
+        ) : null}
         <Button label={ending ? "Ending…" : "End"} variant="danger" onPress={() => void endCall()} disabled={ending} style={{ flex: 1 }} />
       </View>
     </Screen>

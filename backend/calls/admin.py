@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CallParticipant, CallRoom, CallUsage
+from .models import CallParticipant, CallRoom, CallUsage, DirectCall
 
 
 class ParticipantInline(admin.TabularInline):
@@ -16,3 +16,9 @@ class CallRoomAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CallUsage)
+
+
+@admin.register(DirectCall)
+class DirectCallAdmin(admin.ModelAdmin):
+    list_display = ["caller", "callee", "status", "created_at", "answered_at", "ended_at"]
+    list_filter = ["status"]

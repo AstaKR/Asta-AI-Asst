@@ -291,5 +291,28 @@ def finalize_live_meetings(room) -> None:
         Meeting.objects.filter(pk=meeting.pk).update(**fields)
 
 
+def attach_call_recording(meeting: Meeting, path: str, *, started: datetime, duration_seconds: float) -> None:
+    """Stores a call recording on a saved call transcript and re-times the transcript to the audio.
+
+    Live segment times were measured from `live_started_at` (consent); the recording starts at `started`.
+    """
+    from django.core.files import File
+    from django.db.models.functions import Greatest
+
+    anchor = meeting.live_started_at or (meeting.call_room.started_at if meeting.call_room else None) or meeting.created_at
+    shift = int((anchor - started).total_seconds() * 1000)
+    if shift:
+        meeting.segments.update(start_ms=Greatest(F("start_ms") + shift, 0), end_ms=Greatest(F("end_ms") + shift, 0))
+    with open(path, "rb") as f:
+        meeting.audio.save("call.wav", File(f), save=False)
+    meeting.audio_original_name = "call.wav"
+    meeting.audio_size = meeting.audio.size
+    meeting.duration_seconds = max(meeting.duration_seconds or 0, duration_seconds)
+    meeting.live_started_at = started
+    meeting.save(update_fields=["audio", "audio_original_name", "audio_size", "duration_seconds", "live_started_at", "updated_at"])
+    # Playback copy only: the transcript already exists, so the meeting's status stays as it is.
+    MeetingJob.objects.create(meeting=meeting, kind=MeetingJob.Kind.PREPARE)
+
+
 def epoch_ms_to_datetime(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=dt_timezone.utc)

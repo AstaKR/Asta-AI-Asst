@@ -9,6 +9,9 @@ import type { Room } from "../types";
 const REASONS: Record<string, string> = {
   ended_by_participant: "Ended by a participant",
   max_call_duration: "Maximum call duration reached",
+  declined: "Declined",
+  not_answered: "Not answered",
+  cancelled: "Cancelled before it was answered",
 };
 
 const METRIC_LABELS: Record<string, string> = {

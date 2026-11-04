@@ -38,6 +38,29 @@ function useAttributesRerender() {
   }, [room]);
 }
 
+/** Recording state pushed by the server in the room metadata (who agreed, whether it is on). */
+function useRecordingState() {
+  const room = useRoomContext();
+  const read = useCallback(() => {
+    try {
+      const m = JSON.parse(room.metadata || "{}") as { save_transcript?: boolean; record_consent?: string[]; record_audio?: boolean };
+      return { saving: Boolean(m.save_transcript), consented: m.record_consent ?? [], audio: Boolean(m.record_audio) };
+    } catch {
+      return { saving: false, consented: [] as string[], audio: false };
+    }
+  }, [room]);
+  const [state, setState] = useState(read);
+  useEffect(() => {
+    const update = () => setState(read());
+    update();
+    room.on(RoomEvent.RoomMetadataChanged, update);
+    return () => {
+      room.off(RoomEvent.RoomMetadataChanged, update);
+    };
+  }, [room, read]);
+  return state;
+}
+
 function useNow(intervalMs = 1000) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -74,14 +97,15 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
   const [error, setError] = useState("");
   const [ending, setEnding] = useState(false);
   const [translatorLate, setTranslatorLate] = useState(false);
-  // Saved transcript: only after BOTH people agree (server enforces it too).
-  const [transcript, setTranscript] = useState<{ mine: boolean; saving: boolean; waiting: string[] }>({ mine: false, saving: false, waiting: [] });
-  async function toggleTranscript() {
+  // Recording (voices + transcript): only after EVERY participant agrees (server enforces it too).
+  // The room metadata tells everyone who has agreed, so the others see the request at once.
+  const recording = useRecordingState();
+  const [declinedAsk, setDeclinedAsk] = useState("");
+  async function toggleTranscript(save = !recording.consented.includes(session.identity)) {
     try {
-      const res = await meetingsApi.callTranscriptConsent(code, !transcript.mine);
-      setTranscript({ mine: res.my_consent, saving: res.save_transcript, waiting: res.waiting_for });
+      await meetingsApi.callTranscriptConsent(code, save);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not change transcript saving");
+      setError(err instanceof ApiError ? err.message : "Could not change call recording");
     }
   }
   const now = useNow();
@@ -110,6 +134,9 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
   const iNeedTranslation = needsTranslation(otherSpoken, myListen);
   const theyNeedTranslation = needsTranslation(mySpoken, otherListen);
   const anyTranslation = iNeedTranslation || theyNeedTranslation;
+  const iConsented = recording.consented.includes(myIdentity);
+  const othersAsked = recording.consented.some((id) => id !== myIdentity);
+  const recordWhat = recording.audio ? "Voices and transcript" : "Transcript";
   const translatorAvailable =
     info.translation_enabled && Boolean(agent) && !["disabled", "limit", "error"].includes(state.availability);
 
@@ -128,13 +155,14 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
   }, [localParticipant, otherIsPhone, theyNeedTranslation, translatorAvailable, agentIds]);
 
   // Refresh server-side room info while waiting for the other person (to show their name/languages).
+  const isDirect = Boolean(info.direct);
   useEffect(() => {
     if (other && otherInfo) return;
     const id = setInterval(() => {
       api.room(code).then((r) => isMemberView(r) && setInfo(r)).catch(() => undefined);
-    }, 5000);
+    }, isDirect ? 2000 : 5000);
     return () => clearInterval(id);
-  }, [code, other, otherInfo]);
+  }, [code, other, otherInfo, isDirect]);
 
   useEffect(() => {
     setTranslatorLate(false);
@@ -194,6 +222,11 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <ConnectionChip state={connection} />
             <TranslatorChip enabled={info.translation_enabled} agentPresent={Boolean(agent)} availability={state.availability} needed={anyTranslation} />
+            {recording.saving && (
+              <span className="chip bg-danger-soft font-semibold text-danger" title={`${recordWhat} — everyone agreed`}>
+                ● REC
+              </span>
+            )}
             <span className="chip bg-subtle font-mono text-ink" title="Call time / limit">
               {formatClock(elapsed)} / {formatClock(info.max_duration_seconds)}
             </span>
@@ -203,6 +236,21 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
 
       <div className="mx-auto w-full max-w-6xl flex-1 space-y-4 px-4 py-5 sm:px-6">
         <StartAudio label="Tap to enable call audio" className="btn-primary w-full" />
+        {othersAsked && !iConsented && declinedAsk !== recording.consented.join() && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn">
+            <span>
+              <strong>{otherName}</strong> wants to record this call ({recordWhat.toLowerCase()}). It is saved only if you agree too.
+            </span>
+            <span className="flex gap-2">
+              <button className="btn-secondary h-9" onClick={() => setDeclinedAsk(recording.consented.join())}>
+                No
+              </button>
+              <button className="btn-primary h-9" onClick={() => void toggleTranscript(true)}>
+                Agree
+              </button>
+            </span>
+          </div>
+        )}
         {(mediaError || error) && (
           <ErrorBanner
             message={mediaError || error}
@@ -267,6 +315,8 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
                 listen={otherListen}
                 activity={state.activity[other.identity]}
               />
+            ) : info.direct ? (
+              <RingingCard name={info.direct.callee_name} status={info.direct.status} onCancel={() => void endCall()} />
             ) : (
               <InviteCard code={code} hasJoinedBefore={Boolean(otherInfo)} name={otherInfo?.display_name} />
             )}
@@ -335,11 +385,11 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
           </button>
           <button
             onClick={() => void toggleTranscript()}
-            aria-pressed={transcript.mine}
-            className={`btn h-12 rounded-full px-4 ${transcript.saving ? "bg-danger-soft text-danger" : transcript.mine ? "bg-warn-soft text-warn" : "border border-line bg-surface text-ink hover:bg-subtle"}`}
-            title="Save this call's transcript to Meetings (both people must agree)"
+            aria-pressed={iConsented}
+            className={`btn h-12 rounded-full px-4 ${recording.saving ? "bg-danger-soft text-danger" : iConsented ? "bg-warn-soft text-warn" : "border border-line bg-surface text-ink hover:bg-subtle"}`}
+            title={`${recordWhat} to Meetings. Everyone in the call must agree. Press again to stop.`}
           >
-            {transcript.saving ? "● Saving transcript" : transcript.mine ? `Waiting for ${transcript.waiting.join(", ") || "the other person"}` : "Save transcript"}
+            {recording.saving ? "● Recording — stop" : iConsented ? `Waiting for ${otherName}` : othersAsked ? "Agree to record" : "Record call"}
           </button>
           <button onClick={() => void endCall()} disabled={ending} className="btn-danger h-12 rounded-full px-6">
             <PhoneOffIcon /> {ending ? "Ending…" : "End call"}
@@ -450,6 +500,31 @@ function Direction({ from, to, label }: { from?: string; to?: string; label: str
       <span className="font-medium">
         {same ? `${languageName(from)} (no translation)` : `${NATIVE_NAMES[from ?? ""] ?? from} → ${NATIVE_NAMES[to ?? ""] ?? to}`}
       </span>
+    </div>
+  );
+}
+
+/** App-to-app call placed from the dialer: no invite code, the other person's app rings. */
+function RingingCard({ name, status, onCancel }: { name: string; status: string; onCancel: () => void }) {
+  const text: Record<string, string> = {
+    ringing: "Ringing…",
+    answered: "Answered — connecting…",
+    declined: "Declined the call",
+    missed: "Did not answer",
+    cancelled: "Call cancelled",
+    ended: "Call ended",
+  };
+  return (
+    <div className="card p-4 text-center">
+      <div className="text-lg font-semibold">{name}</div>
+      <p className={`mt-1 text-sm ${status === "ringing" || status === "answered" ? "text-muted" : "text-danger"}`} aria-live="polite">
+        {text[status] ?? status}
+      </p>
+      {status === "ringing" && (
+        <button onClick={onCancel} className="btn-secondary mt-3 w-full">
+          Cancel
+        </button>
+      )}
     </div>
   );
 }

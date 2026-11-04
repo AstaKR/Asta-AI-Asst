@@ -12,6 +12,8 @@ try {
 } catch {
   /* storage unavailable */
 }
+import { DialPage } from "./pages/DialPage";
+import { FaceToFacePage } from "./pages/FaceToFacePage";
 import { JoinPage } from "./pages/JoinPage";
 import { Landing } from "./pages/Landing";
 import { LoginPage } from "./pages/LoginPage";
@@ -59,6 +61,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/call/:code/summary" element={guard(<SummaryPage />)} />
           <Route path="/settings" element={guard(<SettingsPage />)} />
           <Route path="/translate" element={guard(<TranslatePage />)} />
+          <Route path="/dial" element={guard(<DialPage />)} />
+          <Route path="/face" element={guard(<FaceToFacePage />)} />
           <Route path="/meetings" element={guard(<MeetingsPage />)} />
           <Route path="/meetings/new" element={guard(<NewMeetingPage />)} />
           <Route path="/meetings/:id" element={guard(<MeetingDetailPage />)} />

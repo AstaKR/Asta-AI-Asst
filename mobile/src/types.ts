@@ -63,6 +63,23 @@ export interface Room {
   usage: CallUsage | null;
   /** Set when the room bridges a normal phone call. */
   phone: RoomPhone | null;
+  /** Set for app-to-app calls placed from the dialer. */
+  direct?: { id: string; status: DirectCall["status"]; callee_name: string } | null;
+}
+
+/** App-to-app call: one user of this app rings another (free, no phone line). */
+export interface DirectCall {
+  id: string;
+  room_code: string;
+  video: boolean;
+  direction: "outgoing" | "incoming";
+  status: "ringing" | "answered" | "declined" | "missed" | "cancelled" | "ended";
+  other_name: string;
+  other_username: string;
+  other_language: string;
+  created_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
 }
 
 export interface RoomPhone {

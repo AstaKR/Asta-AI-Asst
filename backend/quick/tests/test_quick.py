@@ -187,3 +187,25 @@ def test_speech_transcribe_only(api, sarvam):
     body = res.json()
     assert res.status_code == 200 and body["translation"] == body["original"] == "வணக்கம்" and body["audio"] is None
     assert [r.url.path for r in sarvam] == ["/speech-to-text"]
+
+
+def test_hands_free_pair_translates_into_the_other_language(api, sarvam):
+    f = SimpleUploadedFile("talk.wav", wav(1), content_type="audio/wav")
+    res = api.post("/api/quick/speech/", {"file": f, "pair": "hi,ta", "target_language": "en"}, format="multipart")
+    assert res.status_code == 200, res.content
+    body = res.json()
+    assert (body["source_language"], body["target_language"], body["translation"]) == ("ta", "hi", "[hi-IN] வணக்கம்")
+
+
+def test_hands_free_pair_unknown_language(api, sarvam):
+    sarvam.state["language"] = "en-IN"
+    f = SimpleUploadedFile("talk.wav", wav(1), content_type="audio/wav")
+    res = api.post("/api/quick/speech/", {"file": f, "pair": "ta,hi", "target_language": "hi"}, format="multipart")
+    assert res.status_code == 422 and res.json()["code"] == "unknown_language"
+
+
+@pytest.mark.parametrize("pair,extra", [("ta,ta", {}), ("ta,fr", {}), ("ta", {}), ("ta,hi", {"source_language": "ta"})])
+def test_hands_free_pair_validation(api, sarvam, pair, extra):
+    f = SimpleUploadedFile("talk.wav", wav(1), content_type="audio/wav")
+    res = api.post("/api/quick/speech/", {"file": f, "pair": pair, "target_language": "hi", **extra}, format="multipart")
+    assert res.status_code == 400

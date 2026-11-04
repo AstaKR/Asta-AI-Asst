@@ -127,3 +127,33 @@ class CallUsage(models.Model):
 
     def __str__(self) -> str:
         return f"usage for {self.room.code}"
+
+
+class DirectCall(models.Model):
+    """App-to-app call: one user rings another user of this app (by username or mobile number).
+
+    Free — it is a normal translated call room; the callee is added when they answer.
+    """
+
+    class Status(models.TextChoices):
+        RINGING = "ringing", "Ringing"
+        ANSWERED = "answered", "Answered"
+        DECLINED = "declined", "Declined"
+        MISSED = "missed", "Missed"
+        CANCELLED = "cancelled", "Cancelled"
+        ENDED = "ended", "Ended"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.OneToOneField(CallRoom, on_delete=models.CASCADE, related_name="direct_call")
+    caller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="direct_calls_made")
+    callee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="direct_calls_received")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RINGING)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.caller} → {self.callee} ({self.status})"

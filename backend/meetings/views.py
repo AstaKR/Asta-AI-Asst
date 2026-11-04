@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -457,7 +458,6 @@ class CallTranscriptConsentView(APIView):
         me.save(update_fields=["transcript_consent"])
         participants = list(room.participants.all())
         everyone = len(participants) >= 2 and all(p.transcript_consent for p in participants)
-        changed = everyone != room.save_transcript
         room.save_transcript = everyone
         room.save(update_fields=["save_transcript"])
         if everyone:
@@ -472,18 +472,22 @@ class CallTranscriptConsentView(APIView):
                         "status": Meeting.Status.LIVE,
                         "consent_confirmed_at": now,
                         "recorded_at": room.started_at or now,
+                        # Transcript times (and the recording, which starts now) are measured from consent.
+                        "live_started_at": now,
                         "transcription_engine": "live",
                     },
                 )
         else:
             # Consent withdrawn: stop collecting; already-saved text stays until the owner deletes it.
             Meeting.objects.filter(call_room=room, status=Meeting.Status.LIVE).update(status=Meeting.Status.COMPLETED)
-        pushed = livekit_service.update_room_metadata(room) if changed else True
+        # Always pushed: the other participants see the request (or its withdrawal) at once.
+        pushed = livekit_service.update_room_metadata(room)
         return Response(
             {
                 "save_transcript": room.save_transcript,
                 "my_consent": me.transcript_consent,
                 "waiting_for": [p.display_name for p in participants if not p.transcript_consent],
+                "records_audio": settings.CALL_RECORDING_ENABLED,
                 "live_update_applied": bool(pushed),
             }
         )
@@ -504,3 +508,45 @@ class InternalMeetingSegmentView(APIView):
             return Response({"stored": 0, "save_transcript": False})
         stored = services.ingest_live_segment(room, data.validated_data)
         return Response({"stored": stored, "save_transcript": True}, status=status.HTTP_200_OK)
+
+
+class InternalCallRecordingView(APIView):
+    """Worker -> backend: the call's mixed audio (recorded only while every participant agreed).
+
+    Attached to each participant's saved call transcript, so it plays and downloads like a meeting.
+    """
+
+    authentication_classes = []
+    permission_classes = [WorkerSecretPermission]
+    throttle_classes = []
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        room = get_object_or_404(CallRoom, livekit_room_name=str(request.data.get("room_name", "")))
+        upload = request.FILES.get("file")
+        try:
+            started = services.epoch_ms_to_datetime(int(request.data.get("started_epoch_ms")))
+        except (TypeError, ValueError):
+            return Response({"started_epoch_ms": ["Required: milliseconds since epoch."]}, status=400)
+        if upload is None:
+            return Response({"file": ["Required."]}, status=400)
+        if upload.size > settings.MEETING_MAX_UPLOAD_MB * 1024 * 1024:
+            return Response({"detail": "The recording is too large."}, status=400)
+        meetings = list(Meeting.objects.filter(call_room=room, source=Meeting.Source.CALL, audio=""))
+        if not settings.CALL_RECORDING_ENABLED or not meetings:
+            return Response({"stored": 0})
+
+        fd, tmp = tempfile.mkstemp(suffix=".wav")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                for chunk in upload.chunks():
+                    f.write(chunk)
+            try:
+                info = audio_lib.probe(tmp)
+            except audio_lib.InvalidAudio as exc:
+                return Response({"detail": str(exc)}, status=400)
+            for meeting in meetings:
+                services.attach_call_recording(meeting, tmp, started=started, duration_seconds=info.duration_seconds)
+        finally:
+            os.unlink(tmp)
+        return Response({"stored": len(meetings)}, status=201)

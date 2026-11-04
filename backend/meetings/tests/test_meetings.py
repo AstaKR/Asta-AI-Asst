@@ -552,3 +552,87 @@ def test_exports_csv_json_and_subtitles():
     assert vtt.content.decode("utf-8").startswith("WEBVTT\n\n00:00:00.000 --> ") and "-translated.vtt" in vtt["Content-Disposition"]
     # another user's meeting stays private
     assert client_for("other").get(url, {"kind": "json"}).status_code == 404
+
+
+# ---------- call recording ----------
+
+
+def wav_file(seconds: float) -> bytes:
+    buf = io.BytesIO()
+    import wave
+
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(RATE)
+        w.writeframes((tone(seconds) * 8000).astype("<i2").tobytes())
+    return buf.getvalue()
+
+
+def post_recording(room: CallRoom, started_ms: int, data: bytes, secret: str = WORKER_SECRET):
+    f = SimpleUploadedFile("call.wav", data, content_type="audio/wav")
+    return APIClient().post(
+        "/api/internal/call-recording/",
+        {"room_name": room.livekit_room_name, "started_epoch_ms": started_ms, "file": f},
+        format="multipart",
+        HTTP_X_WORKER_SECRET=secret,
+    )
+
+
+def consented_call():
+    a, b = client_for("anand"), client_for("bharat")
+    code = a.post("/api/rooms/", {"spoken_language": "ta-IN", "listen_language": "ta-IN"}, format="json").json()["code"]
+    b.post(f"/api/rooms/{code}/join/", {"spoken_language": "hi-IN", "listen_language": "hi-IN"}, format="json")
+    a.post(f"/api/rooms/{code}/transcript/", {"save": True}, format="json")
+    res = b.post(f"/api/rooms/{code}/transcript/", {"save": True}, format="json").json()
+    assert res["save_transcript"] and res["records_audio"]
+    return a, CallRoom.objects.get(code=code)
+
+
+@pytest.mark.django_db
+def test_room_metadata_asks_worker_to_record_calls_only(settings):
+    from calls import livekit_service
+
+    a = client_for("anand")
+    code = a.post("/api/rooms/", {"spoken_language": "ta-IN", "listen_language": "ta-IN"}, format="json").json()["code"]
+    assert json.loads(livekit_service.room_metadata(CallRoom.objects.get(code=code)))["record_audio"] is True
+    settings.CALL_RECORDING_ENABLED = False
+    assert json.loads(livekit_service.room_metadata(CallRoom.objects.get(code=code)))["record_audio"] is False
+
+
+@pytest.mark.django_db
+def test_call_recording_is_attached_to_every_saved_transcript_and_retimed():
+    a, room = consented_call()
+    meetings = list(Meeting.objects.filter(call_room=room))
+    consent_ms = int(meetings[0].live_started_at.timestamp() * 1000)
+    post_segment(room, "u1", "வணக்கம்", consent_ms + 2000, consent_ms + 3000)
+    # The worker started recording 500 ms after consent: segment times move 500 ms earlier.
+    res = post_recording(room, consent_ms + 500, wav_file(4))
+    assert res.status_code == 201 and res.json()["stored"] == 2
+    for m in Meeting.objects.filter(call_room=room):
+        assert m.audio.name.endswith("original.wav") and m.audio_size > 0
+        assert m.duration_seconds == pytest.approx(4, abs=0.1)
+        seg = m.segments.get()
+        assert seg.start_ms == pytest.approx(1500, abs=1) and seg.end_ms == pytest.approx(2500, abs=1)
+        assert m.jobs.get().kind == "prepare"
+    run_all()
+    m = Meeting.objects.get(call_room=room, owner__username="anand")
+    assert m.audio_playback and m.status == "live"  # playback ready; the transcript status is untouched
+    assert a.get(f"/api/meetings/{m.id}/audio/").status_code in (200, 206)
+    # A second upload for the same call does not replace the stored audio.
+    assert post_recording(room, consent_ms, wav_file(1)).json()["stored"] == 0
+
+
+@pytest.mark.django_db
+def test_call_recording_needs_secret_consent_and_setting(settings):
+    a = client_for("carol")
+    code = a.post("/api/rooms/", {"spoken_language": "ta-IN", "listen_language": "ta-IN"}, format="json").json()["code"]
+    room = CallRoom.objects.get(code=code)
+    now = int(timezone.now().timestamp() * 1000)
+    assert post_recording(room, now, wav_file(1), secret="wrong").status_code == 403
+    assert post_recording(room, now, wav_file(1)).json() == {"stored": 0}  # nobody agreed: nothing kept
+    _, room = consented_call()
+    settings.CALL_RECORDING_ENABLED = False
+    assert post_recording(room, now, wav_file(1)).json() == {"stored": 0}
+    settings.CALL_RECORDING_ENABLED = True
+    assert post_recording(room, now, b"not audio" * 100).status_code == 400

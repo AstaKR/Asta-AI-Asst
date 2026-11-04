@@ -50,6 +50,7 @@ class RoomSerializer(serializers.ModelSerializer):
     duration_seconds = serializers.IntegerField(read_only=True)
     usage = serializers.SerializerMethodField()
     phone = serializers.SerializerMethodField()
+    direct = serializers.SerializerMethodField()
 
     class Meta:
         model = CallRoom
@@ -68,6 +69,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "participants",
             "usage",
             "phone",
+            "direct",
         ]
 
     def get_usage(self, obj):
@@ -80,6 +82,15 @@ class RoomSerializer(serializers.ModelSerializer):
         if call is None:
             return None
         return {"id": str(call.id), "direction": call.direction, "status": call.status, "remote_number": call.remote_number, "sip_identity": call.sip_identity}
+
+    def get_direct(self, obj):
+        """Set when this room is an app-to-app call: the caller's screen shows ringing / declined / missed."""
+        call = getattr(obj, "direct_call", None)
+        if call is None:
+            return None
+        from accounts.models import get_preference
+
+        return {"id": str(call.id), "status": call.status, "callee_name": get_preference(call.callee).display_name or call.callee.username}
 
 
 class RoomPreviewSerializer(serializers.ModelSerializer):

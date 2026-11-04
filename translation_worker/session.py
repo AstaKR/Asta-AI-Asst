@@ -33,6 +33,7 @@ from .routing import (
     track_permissions,
     translated_track_name,
 )
+from .recorder import CallRecorder, upload_recording
 from .usage_reporter import SegmentReporter, UsageReporter
 
 log = logging.getLogger("translation_worker.session")
@@ -60,8 +61,9 @@ def source_name(publication) -> str:
 class LiveKitAudioOutput:
     """Feeds synthesized PCM into an rtc.AudioSource in 20 ms frames (capture_frame paces to real time)."""
 
-    def __init__(self, source: rtc.AudioSource):
+    def __init__(self, source: rtc.AudioSource, on_audio=None):
         self.source = source
+        self.on_audio = on_audio  # (pcm, sample_rate): the call recording hears what was played
         self._resamplers: dict[int, rtc.AudioResampler] = {}
 
     async def push(self, chunk: AudioChunk) -> None:
@@ -80,6 +82,8 @@ class LiveKitAudioOutput:
                 if len(piece) < step:
                     piece = piece + b"\x00" * (step - len(piece))
                 await self.source.capture_frame(rtc.AudioFrame(piece, rate, 1, step // 2))
+                if self.on_audio is not None:
+                    self.on_audio(piece, rate)
 
     def clear(self) -> None:
         self.source.clear_queue()
@@ -151,6 +155,10 @@ class CallSession:
         # Room metadata (set by the backend): "call" or "meeting" mode, and whether transcripts are saved.
         self.mode = "call"
         self.save_transcript = False
+        self.record_audio = False
+        # Audio recording while everyone agreed; capped a little above the call's time limit.
+        self.recorder = CallRecorder(max_seconds=int(job_metadata.get("max_duration_seconds") or 3600) + 120)
+        self._mic_taps: dict[str, object] = {}  # speaker -> the frame reader that records them
         self._read_room_metadata(room.metadata)
         self.segments = SegmentReporter(backend_url=cfg.backend_url, secret=cfg.worker_secret, room_name=room.name)
 
@@ -195,6 +203,10 @@ class CallSession:
             await self.reporter.aclose()
         with contextlib.suppress(Exception):
             await self.segments.aclose()
+        with contextlib.suppress(Exception):
+            await upload_recording(
+                self.recorder, backend_url=self.cfg.backend_url, secret=self.cfg.worker_secret, room_name=self.room.name
+            )
         if self.provider is not None:
             with contextlib.suppress(Exception):
                 await self.provider.aclose()
@@ -221,6 +233,8 @@ class CallSession:
             meta = {}
         self.mode = meta.get("mode", "call")
         self.save_transcript = bool(meta.get("save_transcript"))
+        self.record_audio = bool(meta.get("record_audio"))
+        self.recorder.set_enabled(self.save_transcript and self.record_audio and self.mode == "call")
 
     def _on_room_metadata(self, raw: str) -> None:
         old_mode = self.mode
@@ -254,7 +268,7 @@ class CallSession:
             self._announced[listener] = asyncio.create_task(self._play_announcement(listener, output))
         with contextlib.suppress(Exception):
             await self._announced[listener]
-        await direction.run(self._frames(track))
+        await direction.run(self._frames(track, direction.route.speaker))
 
     async def _play_announcement(self, listener: str, output) -> None:
         info = next((p for p in self._participants() if p.identity == listener), None)
@@ -378,7 +392,7 @@ class CallSession:
                         self._run_after_announcement(route.listener, output, direction, track), name=direction.label
                     )
                 else:
-                    task = asyncio.create_task(direction.run(self._frames(track)), name=direction.label)
+                    task = asyncio.create_task(direction.run(self._frames(track, route.speaker)), name=direction.label)
                 self.directions[route.key] = (route, direction, task, track)
                 log.info("started direction %s", direction.label)
 
@@ -388,14 +402,22 @@ class CallSession:
             if route.listener == speaker:
                 direction.interrupt()
 
-    async def _frames(self, track: rtc.RemoteAudioTrack):
-        stream = rtc.AudioStream.from_track(
-            track=track, sample_rate=self.provider.stt_sample_rate, num_channels=1, frame_size_ms=FRAME_MS
-        )
+    async def _frames(self, track: rtc.RemoteAudioTrack, speaker: str = ""):
+        rate = self.provider.stt_sample_rate
+        stream = rtc.AudioStream.from_track(track=track, sample_rate=rate, num_channels=1, frame_size_ms=FRAME_MS)
+        # One reader per speaker feeds the recording, even if several directions read the same microphone.
+        tap = object()
+        if speaker and self._mic_taps.get(speaker) is None:
+            self._mic_taps[speaker] = tap
         try:
             async for event in stream:
-                yield bytes(event.frame.data)
+                data = bytes(event.frame.data)
+                if self._mic_taps.get(speaker) is tap:
+                    self.recorder.write(f"mic:{speaker}", data, rate)
+                yield data
         finally:
+            if self._mic_taps.get(speaker) is tap:
+                del self._mic_taps[speaker]
             with contextlib.suppress(Exception):
                 await stream.aclose()
 
@@ -407,7 +429,7 @@ class CallSession:
         track = rtc.LocalAudioTrack.create_audio_track(translated_track_name(listener), source)
         options = rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE)
         publication = await self.room.local_participant.publish_track(track, options)
-        output = LiveKitAudioOutput(source)
+        output = LiveKitAudioOutput(source, on_audio=lambda pcm, r: self.recorder.write(f"voice:{listener}", pcm, r))
         self.outputs[listener] = (source, track, publication.sid, output)
         await self._apply_permissions()
         return output

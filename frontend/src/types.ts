@@ -62,6 +62,22 @@ export interface Room {
   duration_seconds: number;
   participants: CallParticipant[];
   usage: CallUsage | null;
+  /** Set for app-to-app calls: the caller's screen shows ringing / declined / missed. */
+  direct?: { id: string; status: DirectCall["status"]; callee_name: string } | null;
+}
+
+export interface DirectCall {
+  id: string;
+  room_code: string;
+  video: boolean;
+  direction: "outgoing" | "incoming";
+  status: "ringing" | "answered" | "declined" | "missed" | "cancelled" | "ended";
+  other_name: string;
+  other_username: string;
+  other_language: string;
+  created_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
 }
 
 export interface RoomPreview {

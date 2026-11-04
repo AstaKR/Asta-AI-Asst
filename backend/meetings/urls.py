@@ -17,4 +17,5 @@ urlpatterns = [
     path("meetings/<uuid:pk>/export/", views.MeetingExportView.as_view()),
     path("rooms/<str:code>/transcript/", views.CallTranscriptConsentView.as_view()),
     path("internal/meeting-segments/", views.InternalMeetingSegmentView.as_view()),
+    path("internal/call-recording/", views.InternalCallRecordingView.as_view()),
 ]

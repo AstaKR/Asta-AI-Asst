@@ -8,6 +8,7 @@ import type {
   AssistantConfig,
   ChatMessage,
   MyPlan,
+  DirectCall,
   PhoneCall,
   PhoneConfig,
   PhotoTranslation,
@@ -186,8 +187,13 @@ export function isMemberView(room: Room | RoomPreview): room is Room {
 export const quickApi = {
   text: (body: { text: string; source_language: string; target_language: string; speak: boolean }) =>
     request<QuickResult>("/quick/text/", "POST", body),
-  speech: (fields: { source_language: string; target_language: string; speak: boolean; transcribe_only?: boolean }, file: UploadFile) =>
-    uploadWithProgress<QuickResult>("/quick/speech/", { ...fields, speak: String(fields.speak), transcribe_only: String(Boolean(fields.transcribe_only)) }, file),
+  /** `pair` ("ta,hi"): hands-free conversation; the spoken language is detected and translated into the other. */
+  speech: (fields: { source_language: string; target_language: string; speak: boolean; transcribe_only?: boolean; pair?: string }, file: UploadFile) =>
+    uploadWithProgress<QuickResult>(
+      "/quick/speech/",
+      { ...fields, speak: String(fields.speak), transcribe_only: String(Boolean(fields.transcribe_only)), pair: fields.pair ?? "" },
+      file,
+    ),
 };
 
 export const assistantApi = {
@@ -210,4 +216,26 @@ export const phoneApi = {
 
 export const planApi = {
   mine: () => request<MyPlan>("/me/plan/"),
+};
+
+/** App-to-app dialer: call another user of this app by username or mobile number (free). */
+export const directApi = {
+  call: (body: { to: string; spoken_language: string; listen_language: string; video: boolean; voice?: string }) =>
+    request<DirectCall>("/direct/calls/", "POST", body),
+  list: () => request<DirectCall[]>("/direct/calls/"),
+  incoming: () => request<DirectCall[]>("/direct/incoming/"),
+  answer: (id: string, body: { spoken_language?: string; listen_language?: string } = {}) =>
+    request<DirectCall>(`/direct/calls/${id}/answer/`, "POST", body),
+  /** Callee: decline. Caller: cancel while it rings. */
+  decline: (id: string) => request<DirectCall>(`/direct/calls/${id}/decline/`, "POST"),
+};
+
+/** Call recording (voices + transcript): saved only when every participant agrees. */
+export const recordingApi = {
+  consent: (code: string, save: boolean) =>
+    request<{ save_transcript: boolean; my_consent: boolean; waiting_for: string[]; records_audio: boolean }>(
+      `/rooms/${encodeURIComponent(code)}/transcript/`,
+      "POST",
+      { save },
+    ),
 };

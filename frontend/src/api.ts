@@ -10,6 +10,7 @@ import type {
   Paginated,
   Plan,
   Preferences,
+  DirectCall,
   Room,
   RoomPreview,
   TokenResponse,
@@ -175,12 +176,14 @@ export interface AICapabilities {
 export const quickApi = {
   text: (body: { text: string; source_language: string; target_language: string; speak: boolean }) =>
     request<QuickResult>("/quick/text/", "POST", body),
-  speech: (file: Blob, name: string, fields: { source_language: string; target_language: string; speak: boolean }) => {
+  /** `pair` ("ta,hi"): hands-free conversation; the spoken language is detected and translated into the other. */
+  speech: (file: Blob, name: string, fields: { source_language: string; target_language: string; speak: boolean; pair?: string }) => {
     const form = new FormData();
     form.append("file", file, name);
     form.append("source_language", fields.source_language);
     form.append("target_language", fields.target_language);
     form.append("speak", String(fields.speak));
+    if (fields.pair) form.append("pair", fields.pair);
     return uploadWithProgress<QuickResult>("/quick/speech/", form);
   },
   capabilities: () => request<AICapabilities>("/ai/capabilities/"),
@@ -214,7 +217,11 @@ export const meetingsApi = {
   liveStarted: (id: string, recording_started_at_ms: number) =>
     request<void>(`/meetings/${id}/live-started/`, "POST", { recording_started_at_ms }),
   callTranscriptConsent: (code: string, save: boolean) =>
-    request<{ save_transcript: boolean; my_consent: boolean; waiting_for: string[] }>(`/rooms/${encodeURIComponent(code)}/transcript/`, "POST", { save }),
+    request<{ save_transcript: boolean; my_consent: boolean; waiting_for: string[]; records_audio: boolean }>(
+      `/rooms/${encodeURIComponent(code)}/transcript/`,
+      "POST",
+      { save },
+    ),
   audioUrl: (id: string) => `/api/meetings/${id}/audio/`,
   exportUrl: (id: string, kind: ExportKind) => `/api/meetings/${id}/export/?kind=${kind}`,
 };
@@ -238,4 +245,18 @@ export const adminApi = {
   setKey: (name: string, value: string) => request<KeysPayload>(`/admin/keys/${name}/`, "PUT", { value }),
   clearKey: (name: string) => request<KeysPayload>(`/admin/keys/${name}/`, "DELETE"),
   testKey: (name: string) => request<{ ok: boolean; detail: string }>(`/admin/keys/${name}/test/`, "POST"),
+};
+
+// ---------- App-to-app dialer (call another user of this app; free) ----------
+
+export const directApi = {
+  call: (body: { to: string; spoken_language: string; listen_language: string; video: boolean; voice?: string }) =>
+    request<DirectCall>("/direct/calls/", "POST", body),
+  list: () => request<DirectCall[]>("/direct/calls/"),
+  get: (id: string) => request<DirectCall>(`/direct/calls/${id}/`),
+  incoming: () => request<DirectCall[]>("/direct/incoming/"),
+  answer: (id: string, body: { spoken_language?: string; listen_language?: string } = {}) =>
+    request<DirectCall>(`/direct/calls/${id}/answer/`, "POST", body),
+  /** Callee: decline. Caller: cancel while it rings. */
+  decline: (id: string) => request<DirectCall>(`/direct/calls/${id}/decline/`, "POST"),
 };

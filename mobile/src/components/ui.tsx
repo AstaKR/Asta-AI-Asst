@@ -96,12 +96,13 @@ export function Banner({ tone, children }: { tone: "warn" | "danger" | "info"; c
   );
 }
 
-export function Chip({ label, tone = "muted" }: { label: string; tone?: "muted" | "brand" | "accent" | "warn" }) {
+export function Chip({ label, tone = "muted" }: { label: string; tone?: "muted" | "brand" | "accent" | "warn" | "danger" }) {
   const map = {
     muted: [colors.subtle, colors.muted],
     brand: [colors.brandSoft, colors.brand],
     accent: [colors.accentSoft, colors.accent],
     warn: [colors.warnSoft, colors.warn],
+    danger: [colors.dangerSoft, colors.danger],
   } as const;
   const [bg, fg] = map[tone];
   return (

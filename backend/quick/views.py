@@ -48,6 +48,22 @@ class SpeechSerializer(_Common):
     source_language = serializers.ChoiceField(choices=[AUTO, *LANGUAGE_CHOICES], default=AUTO)
     # Speech-to-text only (e.g. dictating to the assistant): no translation or voice.
     transcribe_only = serializers.BooleanField(default=False)
+    # Hands-free conversation: "ta,hi". The spoken language is detected and translated into the other one
+    # (source_language must be "auto"; target_language is then ignored).
+    pair = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_pair(self, value):
+        if not value:
+            return []
+        langs = [x.strip() for x in value.split(",")]
+        if len(langs) != 2 or langs[0] == langs[1] or any(x not in MEETING_LANGUAGES for x in langs):
+            raise serializers.ValidationError("Give two different languages, e.g. ta,hi.")
+        return langs
+
+    def validate(self, attrs):
+        if attrs["pair"] and attrs["source_language"] != AUTO:
+            raise serializers.ValidationError({"pair": "Use pair only with source_language=auto."})
+        return attrs
 
 
 def _join_wavs(wavs: list[bytes]) -> bytes | None:
@@ -186,6 +202,12 @@ class QuickSpeechView(_QuickView):
                 return Response({"detail": "No speech was recognised. Hold the button and speak clearly.", "code": "no_speech"}, status=422)
             source = given if given != AUTO else (from_bcp47(detected) or data["target_language"])
             fields = {**data, "target_language": source, "speak": False} if data["transcribe_only"] else data
+            if data["pair"]:
+                if from_bcp47(detected) not in data["pair"]:
+                    names = " or ".join(MEETING_LANGUAGES[x] for x in data["pair"])
+                    return Response({"detail": f"Could not tell whether that was {names}. Please say it again.", "code": "unknown_language"}, status=422)
+                source = from_bcp47(detected)
+                fields = {**data, "target_language": next(x for x in data["pair"] if x != source)}
             return self._finish(
                 request, kind=QuickUsage.Kind.SPEECH, data=fields, original=text, source=source, stt_seconds=stt_seconds, client=client
             )

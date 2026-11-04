@@ -62,6 +62,10 @@ def room_metadata(room: CallRoom) -> str:
             "translation_enabled": room.translation_enabled,
             "mode": room.mode,
             "save_transcript": room.save_transcript,
+            # The worker records the call's audio only while save_transcript is also true.
+            "record_audio": settings.CALL_RECORDING_ENABLED and room.mode == CallRoom.Mode.CALL,
+            # Who has agreed so far: the apps ask the others ("Asha wants to record this call").
+            "record_consent": list(room.participants.filter(transcript_consent=True).values_list("identity", flat=True)),
         }
     )
 

@@ -163,3 +163,22 @@ export const TrashIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
   </svg>
 );
+export const KeypadIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="6" cy="5" r="1.3" />
+    <circle cx="12" cy="5" r="1.3" />
+    <circle cx="18" cy="5" r="1.3" />
+    <circle cx="6" cy="11" r="1.3" />
+    <circle cx="12" cy="11" r="1.3" />
+    <circle cx="18" cy="11" r="1.3" />
+    <circle cx="6" cy="17" r="1.3" />
+    <circle cx="12" cy="17" r="1.3" />
+    <circle cx="18" cy="17" r="1.3" />
+    <circle cx="12" cy="22" r="0.6" />
+  </svg>
+);
+export const ConversationIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M3 5h11v8H8l-3 3v-3H3zM10 16v1h6l3 3v-3h2V9h-4" />
+  </svg>
+);

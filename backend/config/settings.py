@@ -164,6 +164,7 @@ REST_FRAMEWORK = {
         "quick": env("QUICK_RATE", "120/hour"),
         "assistant": env("ASSISTANT_RATE", "60/hour"),
         "dial": env("DIAL_RATE", "20/hour"),
+        "direct_call": env("DIRECT_CALL_RATE", "30/hour"),
         "admin_keys": env("ADMIN_KEYS_RATE", "30/hour"),
     },
 }
@@ -236,6 +237,15 @@ PHONE_FORWARDED_FROM_ATTRIBUTE = env("PHONE_FORWARDED_FROM_ATTRIBUTE", "forwarde
 PHONE_RING_SECONDS = env_int("PHONE_RING_SECONDS", 30)
 PHONE_DIAL_ALLOWED_PREFIXES = [p.strip() for p in env("PHONE_DIAL_ALLOWED_PREFIXES", "+91").split(",") if p.strip()]
 PHONE_DIAL_DAILY_LIMIT_PER_USER = env_int("PHONE_DIAL_DAILY_LIMIT_PER_USER", 20)
+
+# ---------- App-to-app dialer (free: call another user of this app by username or mobile number) ----------
+DIRECT_CALL_RING_SECONDS = env_int("DIRECT_CALL_RING_SECONDS", 45)
+DIRECT_CALL_DAILY_LIMIT_PER_USER = env_int("DIRECT_CALL_DAILY_LIMIT_PER_USER", 50)
+
+# ---------- Call recording ----------
+# When every participant agrees to save the call, the worker also records the voices (originals and
+# translations) and the audio is kept with the saved transcript. false = save the transcript only.
+CALL_RECORDING_ENABLED = env_bool("CALL_RECORDING_ENABLED", True)
 
 # ---------- Meetings: recordings, transcripts, summaries ----------
 # Recordings are stored privately (never served as static files; only the owner can stream them).

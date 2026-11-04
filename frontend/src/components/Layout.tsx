@@ -2,12 +2,31 @@ import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps 
 import { Link, NavLink, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth";
-import { ChartIcon, CloseIcon, GlobeIcon, KeyIcon, LayersIcon, LogoutIcon, MeetingIcon, MenuIcon, MoonIcon, PhoneIcon, SettingsIcon, SunIcon, UsersIcon } from "./Icons";
+import {
+  ChartIcon,
+  CloseIcon,
+  ConversationIcon,
+  GlobeIcon,
+  KeyIcon,
+  KeypadIcon,
+  LayersIcon,
+  LogoutIcon,
+  MeetingIcon,
+  MenuIcon,
+  MoonIcon,
+  PhoneIcon,
+  SettingsIcon,
+  SunIcon,
+  UsersIcon,
+} from "./Icons";
+import { IncomingCall } from "./IncomingCall";
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
 const MAIN_NAV: { to: string; label: string; icon: Icon }[] = [
   { to: "/start", label: "Calls", icon: PhoneIcon },
+  { to: "/dial", label: "Dial", icon: KeypadIcon },
   { to: "/translate", label: "Translate", icon: GlobeIcon },
+  { to: "/face", label: "Face to face", icon: ConversationIcon },
   { to: "/meetings", label: "Meetings", icon: MeetingIcon },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -127,7 +146,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 const FOOTNOTE =
-  "AI translations and notes can contain mistakes. Calls are not recorded unless every participant chooses “Save transcript”; meetings you record or upload are stored privately until you delete them.";
+  "AI translations and notes can contain mistakes. Calls are recorded only when every participant chooses “Record call”; recordings, meetings and transcripts are stored privately until you delete them.";
 
 export function Layout({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const { user } = useAuth();
@@ -157,6 +176,7 @@ export function Layout({ children, wide = false }: { children: ReactNode; wide?:
 
   return (
     <div className="min-h-full lg:grid lg:grid-cols-[260px_1fr]">
+      <IncomingCall />
       <aside className="sticky top-0 hidden h-screen border-r border-line bg-surface lg:block">
         <Sidebar />
       </aside>
