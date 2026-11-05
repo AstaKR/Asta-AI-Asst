@@ -55,7 +55,7 @@ export default function FaceToFaceScreen() {
                 borderRadius: 999,
                 borderWidth: 1,
                 borderColor: lang[side] === l.code ? colors.brand : colors.line,
-                backgroundColor: lang[side] === l.code ? colors.brandSoft : "#fff",
+                backgroundColor: lang[side] === l.code ? colors.brandSoft : colors.surface,
               }}
             >
               <Text style={{ fontWeight: "700", color: lang[side] === l.code ? colors.brand : colors.ink }}>{l.native}</Text>
@@ -105,7 +105,7 @@ export default function FaceToFaceScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       {half("top")}
-      <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line, backgroundColor: "#fff", paddingVertical: 6, paddingHorizontal: 12, gap: 6 }}>
+      <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, paddingVertical: 6, paddingHorizontal: 12, gap: 6 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <Text style={{ color: colors.muted }}>Speak aloud</Text>
           <Switch value={speak} onValueChange={setSpeak} disabled={auto.listening} trackColor={{ true: colors.brand }} />

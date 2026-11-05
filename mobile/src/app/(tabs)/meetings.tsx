@@ -65,7 +65,7 @@ export default function MeetingsScreen() {
     <Pressable
       key={label}
       onPress={onPress}
-      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: active ? colors.brand : colors.line, backgroundColor: active ? colors.brandSoft : "#fff" }}
+      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: active ? colors.brand : colors.line, backgroundColor: active ? colors.brandSoft : colors.surface }}
     >
       <Text style={{ fontSize: 13, fontWeight: "600", color: active ? colors.brand : colors.ink }}>{label}</Text>
     </Pressable>

@@ -2,22 +2,25 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps, ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
 
+// Dark-first "aurora glass" palette. Solid colours (not translucent) so Android renders stacked cards reliably.
 export const colors = {
-  ink: "#0b1220",
-  muted: "#5b6475",
-  line: "#e3e7ef",
-  surface: "#ffffff",
-  subtle: "#f3f5f9",
-  canvas: "#f6f7fb",
-  brand: "#4f46e5",
-  brandStrong: "#4338ca",
-  brandSoft: "#eef0ff",
-  accent: "#0f766e",
-  accentSoft: "#e8f7f3",
-  danger: "#c0262d",
-  dangerSoft: "#fdf0f0",
-  warn: "#8a4b06",
-  warnSoft: "#fff7e8",
+  ink: "#eef1fb",
+  muted: "#a3adc7",
+  line: "#2a3358",
+  surface: "#131a33",
+  surfaceStrong: "#1d2650",
+  subtle: "#1a2244",
+  canvas: "#070b1a",
+  brand: "#7c6cf5",
+  brandStrong: "#6a59ee",
+  brandSoft: "#262a5e",
+  accent: "#35e0c0",
+  accentSoft: "#0f3a3a",
+  danger: "#ff7a85",
+  dangerSoft: "#3d1a28",
+  warn: "#ffc467",
+  warnSoft: "#3a2d12",
+  glow: "#8b7cff",
 };
 
 export type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -56,6 +59,7 @@ export function Button(props: { label: string; onPress: () => void; variant?: Va
       style={({ pressed }) => [
         styles.button,
         { backgroundColor: bg, opacity: props.disabled ? 0.5 : pressed ? 0.85 : 1 },
+        variant === "primary" && { shadowColor: colors.glow, shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
         variant === "secondary" && { borderWidth: 1, borderColor: colors.line },
         props.style,
       ]}
@@ -116,14 +120,14 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.canvas, padding: 16 },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.line,
     padding: 16,
     marginBottom: 14,
-    shadowColor: "#0b1220",
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
+    shadowColor: "#8b7cff",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
@@ -141,7 +145,7 @@ export const styles = StyleSheet.create({
     color: colors.ink,
     backgroundColor: colors.surface,
   },
-  button: { minHeight: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
+  button: { minHeight: 52, borderRadius: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
   buttonText: { fontSize: 16, fontWeight: "700" },
   banner: { borderRadius: 12, padding: 12, marginBottom: 10 },
   chip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },

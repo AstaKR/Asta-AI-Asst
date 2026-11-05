@@ -91,7 +91,7 @@ export default function AssistantScreen() {
               onPress={() => setLanguage(l.code)}
               accessibilityRole="radio"
               accessibilityState={{ selected: language === l.code }}
-              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: language === l.code ? colors.brand : colors.line, backgroundColor: language === l.code ? colors.brandSoft : "#fff" }}
+              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: language === l.code ? colors.brand : colors.line, backgroundColor: language === l.code ? colors.brandSoft : colors.surface }}
             >
               <Text style={{ fontWeight: "600", color: language === l.code ? colors.brand : colors.ink }}>{l.native}</Text>
             </Pressable>
@@ -122,7 +122,7 @@ export default function AssistantScreen() {
           const mine = item.role === "user";
           return (
             <View style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "88%" }}>
-              <View style={{ backgroundColor: mine ? colors.brand : "#fff", borderRadius: 16, padding: 12, borderWidth: mine ? 0 : 1, borderColor: colors.line }}>
+              <View style={{ backgroundColor: mine ? colors.brand : colors.surface, borderRadius: 16, padding: 12, borderWidth: mine ? 0 : 1, borderColor: colors.line }}>
                 <Text style={{ color: mine ? "#fff" : colors.ink, fontSize: 16, lineHeight: 23 }} selectable>
                   {item.content}
                 </Text>
@@ -148,7 +148,7 @@ export default function AssistantScreen() {
         }}
       />
 
-      <View style={{ flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1, borderColor: colors.line, backgroundColor: "#fff", alignItems: "flex-end" }}>
+      <View style={{ flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, alignItems: "flex-end" }}>
         <Pressable
           onPressIn={() => void mic.start("mic", () => void releaseMic())}
           onPressOut={() => void releaseMic()}

@@ -358,7 +358,7 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
         {recording.saving && <Chip label="● REC" tone="danger" />}
       </View>
       {othersAsked && !iConsented && declinedAsk !== recording.consented.join() && (
-        <Card style={{ backgroundColor: colors.warnSoft, borderColor: "#fcd34d" }}>
+        <Card style={{ backgroundColor: colors.warnSoft, borderColor: colors.warn }}>
           <Text style={{ color: colors.ink, fontWeight: "600" }}>
             {otherName} wants to record this call ({recordWhat}). It is saved only if you agree too.
           </Text>
@@ -447,7 +447,7 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
                   style={{
                     alignSelf: mine ? "flex-end" : "flex-start",
                     maxWidth: "88%",
-                    backgroundColor: mine ? colors.brand : "#f1f5f9",
+                    backgroundColor: mine ? colors.brand : colors.subtle,
                     borderRadius: 16,
                     padding: 10,
                     opacity: line.skipped ? 0.5 : 1,

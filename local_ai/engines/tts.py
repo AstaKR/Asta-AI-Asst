@@ -11,7 +11,7 @@ import numpy as np
 
 from ..config import LocalAIConfig
 from ..registry import ModelRegistry, ModelUnavailable
-from ..text import split_sentences
+from ..text import LRU, split_sentences
 from . import has_module, is_downloaded
 
 # Recommended speakers from the model card (first = default).
@@ -28,6 +28,7 @@ class TextToSpeech:
         self.cfg = cfg
         self.registry = registry
         self._lock = threading.Lock()
+        self._cache = LRU(max(cfg.cache_items // 8, 0))  # audio clips are large; keep fewer
 
     def status(self) -> dict:
         return {
@@ -70,6 +71,10 @@ class TextToSpeech:
         """Returns (mono PCM16, sample rate). Generated sentence by sentence to bound memory and length."""
         import torch
 
+        key = (text, language, self.speaker(language, speaker))
+        hit = self._cache.get(key)
+        if hit is not None:
+            return hit
         size = 2.2 if self.cfg.tts_dtype == "bfloat16" else 4.0
         model, tokenizer, description_tokenizer = self.registry.get(f"tts:{self.cfg.tts_model}", size, self._load)
         rate = model.config.sampling_rate
@@ -79,7 +84,7 @@ class TextToSpeech:
             desc = description_tokenizer(description, return_tensors="pt")
             for sentence in split_sentences(text, max_chars=250):
                 prompt = tokenizer(sentence, return_tensors="pt")
-                with torch.no_grad():
+                with torch.inference_mode():
                     generation = model.generate(
                         input_ids=desc.input_ids,
                         attention_mask=desc.attention_mask,
@@ -90,4 +95,5 @@ class TextToSpeech:
                 parts.append(np.zeros(int(rate * GAP_SECONDS), dtype=np.float32))
         audio = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
         pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16).tobytes()
+        self._cache.put(key, (pcm, rate))
         return pcm, rate

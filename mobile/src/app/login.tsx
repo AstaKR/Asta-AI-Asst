@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text } from "rea
 
 import { ApiError, api } from "../api";
 import { useAuth } from "../auth";
-import { Banner, Button, Card, Field, Muted, Screen, Title } from "../components/ui";
+import { Banner, Button, Card, Field, colors, Muted, Screen, Title } from "../components/ui";
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -69,7 +69,7 @@ export default function Login() {
               disabled={username.trim().length < 3 || password.length < (isLogin ? 1 : 8)}
             />
             <Pressable onPress={() => { setMode(isLogin ? "register" : "login"); setError(""); }} style={{ marginTop: 14 }}>
-              <Text style={{ color: "#2563eb", textAlign: "center" }}>
+              <Text style={{ color: colors.brand, textAlign: "center" }}>
                 {isLogin ? "New here? Create an account" : "Already have an account? Sign in"}
               </Text>
             </Pressable>

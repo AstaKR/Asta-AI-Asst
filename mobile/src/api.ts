@@ -204,6 +204,11 @@ export const quickApi = {
     ),
 };
 
+export const quickSpeakApi = {
+  /** Voice for already-translated text, fetched after the text is on screen. */
+  speak: (body: { text: string; language: string }) => request<{ audio: string | null; audio_mime: string | null }>("/quick/speak/", "POST", body),
+};
+
 export const assistantApi = {
   config: () => request<AssistantConfig>("/assistant/config/"),
   chat: (messages: ChatMessage[], language: string) => request<{ reply: string }>("/assistant/chat/", "POST", { messages, language }),

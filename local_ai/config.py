@@ -29,6 +29,9 @@ class LocalAIConfig:
     mt_indic_en: str = "ai4bharat/indictrans2-indic-en-dist-200M"
     mt_indic_indic: str = "ai4bharat/indictrans2-indic-indic-dist-320M"
     mt_indic_indic_mode: str = "direct"  # direct | pivot
+    mt_quantize: bool = True  # int8 dynamic quantization of the translation models: ~2x faster on a CPU
+    cache_items: int = 256  # repeated translations / voice clips are served from memory
+    preload: bool = True  # load the translation and speech models at startup, not on the first request
     mt_beams: int = 1  # model card uses 5; 1 (greedy) is several times faster on a CPU
     whisper_model: str = "small"  # meetings and uploads: accuracy first
     whisper_fast_model: str = "base"  # live turns (?fast=1): ~3x faster on a laptop CPU, weaker Tamil
@@ -55,6 +58,9 @@ def load_config() -> LocalAIConfig:
         mt_indic_en=env("LOCAL_MT_INDIC_EN_MODEL", LocalAIConfig.mt_indic_en),
         mt_indic_indic=env("LOCAL_MT_INDIC_INDIC_MODEL", LocalAIConfig.mt_indic_indic),
         mt_indic_indic_mode=env("LOCAL_MT_INDIC_INDIC_MODE", "direct"),
+        mt_quantize=env("LOCAL_MT_QUANTIZE", "1") not in ("0", "false", "no"),
+        cache_items=int(env("LOCAL_AI_CACHE_ITEMS", "256")),
+        preload=env("LOCAL_AI_PRELOAD", "1") not in ("0", "false", "no"),
         mt_beams=int(env("LOCAL_MT_BEAMS", "1")),
         whisper_model=env("LOCAL_WHISPER_MODEL", "small"),
         whisper_fast_model=env("LOCAL_WHISPER_FAST_MODEL", "base"),

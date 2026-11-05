@@ -47,3 +47,31 @@ def split_sentences(paragraph: str, max_chars: int = 400) -> list[str]:
 def paragraphs(text: str) -> list[str]:
     """Lines of the text; blank lines are kept as '' so the layout can be rebuilt."""
     return [line.strip() for line in text.replace("\r\n", "\n").split("\n")]
+
+
+class LRU:
+    """Tiny thread-safe in-memory cache (repeated phrases are common: greetings, replies)."""
+
+    def __init__(self, size: int):
+        import threading
+        from collections import OrderedDict
+
+        self._d: "OrderedDict" = OrderedDict()
+        self._size = size
+        self._lock = threading.Lock()
+
+    def get(self, key):
+        with self._lock:
+            if key in self._d:
+                self._d.move_to_end(key)
+                return self._d[key]
+        return None
+
+    def put(self, key, value) -> None:
+        if self._size <= 0:
+            return
+        with self._lock:
+            self._d[key] = value
+            self._d.move_to_end(key)
+            while len(self._d) > self._size:
+                self._d.popitem(last=False)

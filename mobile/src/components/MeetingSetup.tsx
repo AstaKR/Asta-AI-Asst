@@ -35,7 +35,7 @@ function Chips({ options, value, onChange }: { options: { code: string; label: s
               borderRadius: 999,
               borderWidth: active ? 2 : 1,
               borderColor: active ? colors.brand : colors.line,
-              backgroundColor: active ? colors.brandSoft : "#fff",
+              backgroundColor: active ? colors.brandSoft : colors.surface,
             }}
           >
             <Text style={{ fontWeight: "600", color: active ? colors.brand : colors.ink }}>{o.label}</Text>
@@ -55,7 +55,7 @@ export function MeetingSetup({ value, onChange, allowAuto = true }: { value: Mee
       <Chips options={allowAuto ? [{ code: "auto", label: "Auto / mixed" }, ...langs] : langs} value={value.spoken_language} onChange={(spoken_language) => onChange({ ...value, spoken_language })} />
       <Text style={[styles.label, { marginTop: 14 }]}>Translate into</Text>
       <Chips options={[{ code: "", label: "None" }, ...langs]} value={value.translation_language} onChange={(translation_language) => onChange({ ...value, translation_language })} />
-      <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", marginTop: 16, backgroundColor: "#f8fafc", borderRadius: 12, padding: 12 }}>
+      <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", marginTop: 16, backgroundColor: colors.subtle, borderRadius: 12, padding: 12 }}>
         <Switch value={value.consent} onValueChange={(consent) => onChange({ ...value, consent })} trackColor={{ true: colors.brand }} accessibilityLabel="Consent" />
         <Text style={{ flex: 1, fontSize: 13, color: colors.ink, lineHeight: 18 }}>{CONSENT_TEXT}</Text>
       </View>

@@ -172,7 +172,7 @@ function LiveView({ meetingId, code, session, error }: { meetingId: string; code
         <ScrollView ref={scroll} contentContainerStyle={{ padding: 14, gap: 10 }} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
           {state.lines.length === 0 && partials.length === 0 && <Muted>The live transcript appears here when you speak.</Muted>}
           {state.lines.map((line) => (
-            <View key={line.id} style={{ backgroundColor: "#f1f5f9", borderRadius: 14, padding: 10, opacity: line.skipped ? 0.5 : 1 }}>
+            <View key={line.id} style={{ backgroundColor: colors.subtle, borderRadius: 14, padding: 10, opacity: line.skipped ? 0.5 : 1 }}>
               <Text style={{ fontSize: 16, color: colors.ink }}>{line.original}</Text>
               {line.translation && line.translation !== line.original ? (
                 <Text style={{ fontSize: 14, color: colors.brand, marginTop: 4 }}>{line.translation}</Text>

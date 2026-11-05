@@ -34,7 +34,7 @@ export default function NewMeetingScreen() {
 
   return (
     <Screen>
-      <View style={{ flexDirection: "row", backgroundColor: "#e2e8f0", borderRadius: 12, padding: 4, marginBottom: 14 }} accessibilityRole="tablist">
+      <View style={{ flexDirection: "row", backgroundColor: colors.subtle, borderRadius: 12, padding: 4, marginBottom: 14 }} accessibilityRole="tablist">
         {TABS.map((t) => (
           <Pressable
             key={t.key}

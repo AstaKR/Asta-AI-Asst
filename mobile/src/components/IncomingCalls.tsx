@@ -72,7 +72,7 @@ export function IncomingCalls({ phoneEnabled }: { phoneEnabled: boolean }) {
     <View>
       {error ? <Banner tone="danger">{error}</Banner> : null}
       {ringing.map((r) => (
-        <Card key={r.call.id} style={{ backgroundColor: colors.accentSoft, borderColor: "#a7f3d0" }}>
+        <Card key={r.call.id} style={{ backgroundColor: colors.accentSoft, borderColor: colors.accent }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
             <Icon name={r.kind === "app" && r.call.video ? "videocam" : "call"} size={18} color={colors.accent} />
             <Text style={[styles.label, { color: colors.accent, marginBottom: 0 }]}>

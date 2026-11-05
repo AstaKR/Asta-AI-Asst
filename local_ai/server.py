@@ -184,12 +184,29 @@ def create_app(cfg: LocalAIConfig | None = None, engines: dict | None = None) ->
     return app
 
 
+def _preload(app: web.Application) -> None:
+    import threading
+
+    def run() -> None:
+        translator = app[ENGINES]["translate"]
+        try:
+            translator.preload()
+            log.info("translation models preloaded")
+        except Exception as exc:  # models missing / not downloaded: requests will report it
+            log.warning("preload skipped: %s", exc)
+
+    threading.Thread(target=run, name="preload", daemon=True).start()
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     cfg = load_config()
     if cfg.host not in ("127.0.0.1", "localhost", "::1") and not cfg.secret:
         raise SystemExit("Set LOCAL_AI_SECRET before binding the local AI service to a non-local address.")
-    web.run_app(create_app(cfg), host=cfg.host, port=cfg.port)
+    app = create_app(cfg)
+    if cfg.preload:
+        _preload(app)
+    web.run_app(app, host=cfg.host, port=cfg.port)
 
 
 if __name__ == "__main__":

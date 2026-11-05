@@ -8,7 +8,7 @@ import threading
 
 from ..config import LocalAIConfig
 from ..registry import ModelRegistry, ModelUnavailable
-from ..text import FLORES, paragraphs, split_sentences
+from ..text import FLORES, LRU, paragraphs, split_sentences
 from . import has_module, is_downloaded
 
 # Approximate resident size (float32 weights + runtime), used for the RAM budget.
@@ -26,6 +26,7 @@ class Translator:
         self.registry = registry
         self._lock = threading.Lock()  # one translation at a time: CPU-bound
         self._processor = None
+        self._cache = LRU(cfg.cache_items)
 
     # ---------- capabilities ----------
 
@@ -72,6 +73,11 @@ class Translator:
                 f"{model_name} is not available. Accept its licence on huggingface.co and run `hf auth login`, then retry."
             ) from exc
         model.eval()
+        if self.cfg.mt_quantize:
+            try:  # int8 weights for the Linear layers; small quality cost, much faster on a CPU
+                model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+            except Exception:  # unsupported build: keep float32
+                pass
         return tokenizer, model
 
     def _ip(self):
@@ -93,7 +99,7 @@ class Translator:
             chunk = sentences[i : i + BATCH]
             batch = ip.preprocess_batch(chunk, src_lang=FLORES[src], tgt_lang=FLORES[tgt])
             inputs = tokenizer(batch, truncation=True, padding="longest", return_tensors="pt", return_attention_mask=True)
-            with torch.no_grad():
+            with torch.inference_mode():
                 tokens = model.generate(
                     **inputs, use_cache=True, min_length=0, max_length=256, num_beams=self.cfg.mt_beams, num_return_sequences=1
                 )
@@ -106,6 +112,10 @@ class Translator:
         hops = self.models_for(source, target)
         if not hops or not text.strip():
             return text
+        key = (text, source, target)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
         with self._lock:
             result_lines = []
             for line in paragraphs(text):

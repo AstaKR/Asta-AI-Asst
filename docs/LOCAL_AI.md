@@ -91,3 +91,16 @@ Keep Sarvam for live calls until the local latency has been measured and accepte
 * No speaker identification (diarization): transcripts show no speaker names rather than guessed ones.
 * Summaries from a 4B model are simpler than Claude's; every item still needs transcript evidence or it is dropped.
 * Voices have not yet been checked by native Tamil/Hindi listeners — do this before offering local speech to users.
+
+## Speed (added 2026-11-05)
+
+| Change | Effect |
+|---|---|
+| `LOCAL_MT_QUANTIZE=1` (default) | int8 dynamic quantization of IndicTrans2: roughly 2x faster on a CPU, tiny quality cost. Set `0` to compare quality. |
+| `LOCAL_AI_PRELOAD=1` (default) | Translation models load at service start, so the first request is not a cold start. |
+| `LOCAL_AI_CACHE_ITEMS=256` | Repeated translations and voice clips (1/8 of this number) are served from memory. |
+| Text first | `/api/quick/text|speech/` with `speak=false`, then `POST /api/quick/speak/` for the voice. The apps show the translation immediately and play the voice when it arrives. |
+| `timings` | Every quick response reports seconds per step (`stt`, `translate`, `tts`); the backend logs them as `quick timings`. |
+
+Not yet measured on the server: read the `quick timings` log lines after a few real translations to see where time goes.
+If TTS dominates, use `LOCAL_TTS_DTYPE=bfloat16`, or Sarvam for speech only (`TTS_ENGINE=sarvam`).

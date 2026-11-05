@@ -24,7 +24,7 @@ export function LanguagePicker({ value, onChange }: { value: LanguageSelection; 
                 flex: 1,
                 borderWidth: active ? 2 : 1,
                 borderColor: active ? colors.brand : colors.line,
-                backgroundColor: active ? colors.brandSoft : "#fff",
+                backgroundColor: active ? colors.brandSoft : colors.surface,
                 borderRadius: 12,
                 paddingVertical: 12,
                 alignItems: "center",

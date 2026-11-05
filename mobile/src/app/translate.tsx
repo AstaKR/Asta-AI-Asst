@@ -56,7 +56,7 @@ export default function InstantTranslateScreen() {
           onPress={() => onPick(l.code)}
           accessibilityRole="radio"
           accessibilityState={{ selected: value === l.code }}
-          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: value === l.code ? colors.brand : colors.line, backgroundColor: value === l.code ? colors.brandSoft : "#fff" }}
+          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: value === l.code ? colors.brand : colors.line, backgroundColor: value === l.code ? colors.brandSoft : colors.surface }}
         >
           <Text style={{ fontWeight: "600", color: value === l.code ? colors.brand : colors.ink }}>{l.native}</Text>
         </Pressable>

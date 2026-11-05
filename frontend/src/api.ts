@@ -190,6 +190,9 @@ export const quickApi = {
     if (fields.pair) form.append("pair", fields.pair);
     return uploadWithProgress<QuickResult>("/quick/speech/", form);
   },
+  /** Voice for already-translated text, fetched after the text is on screen. */
+  speak: (body: { text: string; language: string }) =>
+    request<{ audio: string | null; audio_mime: string | null }>("/quick/speak/", "POST", body),
   capabilities: () => request<AICapabilities>("/ai/capabilities/"),
 };
 

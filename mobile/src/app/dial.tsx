@@ -34,7 +34,7 @@ export default function DialScreen() {
             onPress={() => setTab(t)}
             accessibilityRole="tab"
             accessibilityState={{ selected: tab === t }}
-            style={{ flex: 1, paddingVertical: 9, borderRadius: 999, alignItems: "center", backgroundColor: tab === t ? "#fff" : "transparent" }}
+            style={{ flex: 1, paddingVertical: 9, borderRadius: 999, alignItems: "center", backgroundColor: tab === t ? colors.surfaceStrong : "transparent" }}
           >
             <Text style={{ fontWeight: "700", color: tab === t ? colors.brand : colors.muted }}>{t === "app" ? "App users (free)" : "Phone number"}</Text>
           </Pressable>
@@ -222,7 +222,7 @@ function PhoneLineDialer({ header }: { header: ReactNode }) {
                 onPress={() => setCallerLanguage(l)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: callerLanguage === l }}
-                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: callerLanguage === l ? colors.brand : colors.line, backgroundColor: callerLanguage === l ? colors.brandSoft : "#fff" }}
+                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: callerLanguage === l ? colors.brand : colors.line, backgroundColor: callerLanguage === l ? colors.brandSoft : colors.surface }}
               >
                 <Text style={{ fontWeight: "600", color: callerLanguage === l ? colors.brand : colors.ink }}>{l ? NATIVE_NAMES[l] : "Detect"}</Text>
               </Pressable>

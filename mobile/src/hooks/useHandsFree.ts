@@ -8,7 +8,7 @@ import {
 import { File, Paths } from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiError, quickApi } from "../api";
+import { ApiError, quickApi, quickSpeakApi } from "../api";
 import { createTurnDetector } from "../lib/vad";
 import type { QuickResult } from "../types";
 
@@ -95,14 +95,15 @@ export function useHandsFree(onResult: (r: QuickResult) => void) {
           setBusy(true);
           try {
             const r = await quickApi.speech(
-              { source_language: "auto", target_language: pair.split(",")[1], speak, pair },
+              { source_language: "auto", target_language: pair.split(",")[1], speak: false, pair },
               { uri, name: "speech.m4a", type: "audio/mp4" },
             );
             setError("");
             onResultRef.current(r);
             if (speak) {
+              const v = await quickSpeakApi.speak({ text: r.translation, language: r.target_language });
               await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-              await playAndWait(r);
+              await playAndWait({ ...r, ...v });
             }
           } catch (err) {
             setError(err instanceof ApiError ? err.message : "Translation failed");

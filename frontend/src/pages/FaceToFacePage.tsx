@@ -103,12 +103,16 @@ export function FaceToFacePage() {
     try {
       const l = langRef.current;
       const r = await quickApi.speech(blob, `speech.${format!.ext}`, side
-        ? { source_language: l[side], target_language: l[other(side)], speak: speakRef.current }
-        : { source_language: "auto", target_language: l.b, speak: speakRef.current, pair: `${l.a},${l.b}` });
+        ? { source_language: l[side], target_language: l[other(side)], speak: false }
+        : { source_language: "auto", target_language: l.b, speak: false, pair: `${l.a},${l.b}` });
       const speaker: Side = side ?? (r.source_language === l.a ? "a" : "b");
       setLast({ [speaker]: r });
       setError("");
-      await play(r);
+      if (speakRef.current && r.translation) {
+        // Text is already on screen; fetch the (slower) voice now.
+        const v = await quickApi.speak({ text: r.translation, language: r.target_language });
+        await play({ ...r, ...v });
+      }
       return true;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Translation failed");

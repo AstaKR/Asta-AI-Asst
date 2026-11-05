@@ -9,7 +9,7 @@ import {
 import { File, Paths } from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiError, quickApi } from "../api";
+import { ApiError, quickApi, quickSpeakApi } from "../api";
 import type { QuickResult } from "../types";
 
 const MIN_MS = 400;
@@ -95,8 +95,14 @@ export function useQuickTranslate(maxSeconds = 30) {
       setBusy(key);
       working.current = true;
       try {
-        const result = await quickApi.speech(fields, { uri, name: "speech.m4a", type: "audio/mp4" });
-        if (fields.speak) await play(result);
+        // Text first: the slow voice step runs after the translation is already on screen.
+        const result = await quickApi.speech({ ...fields, speak: false }, { uri, name: "speech.m4a", type: "audio/mp4" });
+        if (fields.speak && result.translation) {
+          quickSpeakApi
+            .speak({ text: result.translation, language: result.target_language })
+            .then((v) => play({ ...result, ...v }))
+            .catch(() => undefined);
+        }
         return result;
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Translation failed");

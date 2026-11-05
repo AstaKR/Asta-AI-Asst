@@ -112,7 +112,7 @@ export default function MeetingDetailScreen() {
         </Banner>
       ) : null}
       {meeting.status === "failed" && (
-        <Card style={{ borderColor: "#fecaca" }}>
+        <Card style={{ borderColor: colors.danger }}>
           <Text style={{ color: colors.danger, marginBottom: 10 }}>{meeting.error_message || "Processing failed."}</Text>
           {meeting.has_audio && <Button label="Retry transcription" variant="secondary" onPress={() => void run("Retry", async () => setMeeting(await meetingsApi.transcribe(meeting.id)))} />}
         </Card>
@@ -136,9 +136,9 @@ export default function MeetingDetailScreen() {
           </View>
         </Card>
       )}
-      <View style={{ flexDirection: "row", backgroundColor: "#e2e8f0", borderRadius: 12, padding: 4, marginBottom: 12 }}>
+      <View style={{ flexDirection: "row", backgroundColor: colors.subtle, borderRadius: 12, padding: 4, marginBottom: 12 }}>
         {(["transcript", "notes"] as const).map((t) => (
-          <Pressable key={t} onPress={() => setTab(t)} style={{ flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center", backgroundColor: tab === t ? "#fff" : "transparent" }}>
+          <Pressable key={t} onPress={() => setTab(t)} style={{ flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center", backgroundColor: tab === t ? colors.surfaceStrong : "transparent" }}>
             <Text style={{ fontWeight: "700", color: tab === t ? colors.ink : colors.muted }}>
               {t === "transcript" ? `Transcript (${meeting.segments.length})` : "Notes & export"}
             </Text>
@@ -216,7 +216,7 @@ export default function MeetingDetailScreen() {
           <Pressable
             onPress={() => seek(s.start_ms)}
             onLongPress={() => setEditing(s)}
-            style={[styles.card, { marginBottom: 8, padding: 12 }, s.index === active && { backgroundColor: colors.brandSoft, borderColor: "#c7d2fe" }]}
+            style={[styles.card, { marginBottom: 8, padding: 12 }, s.index === active && { backgroundColor: colors.brandSoft, borderColor: colors.brand }]}
             accessibilityHint="Tap to play from here, long-press to correct"
           >
             <Text style={{ fontSize: 12, fontWeight: "700", color: colors.brand }}>
@@ -263,7 +263,7 @@ function EditForm({ segment, onClose, onSave }: EditProps) {
   return (
     <>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(15,23,42,0.4)" }}>
-        <View style={{ backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 18, borderTopRightRadius: 18, gap: 10 }}>
+        <View style={{ backgroundColor: colors.surface, padding: 16, borderTopLeftRadius: 18, borderTopRightRadius: 18, gap: 10 }}>
           <Text style={styles.label}>Correct segment {segment ? formatClock(segment.start_ms) : ""}</Text>
           {error ? <Banner tone="danger">{error}</Banner> : null}
           <TextInput value={original} onChangeText={setOriginal} multiline style={[styles.input, { minHeight: 90, textAlignVertical: "top" }]} accessibilityLabel="Original text" />
@@ -305,7 +305,7 @@ function NotesTab(props: {
         <Pressable
           key={l.code}
           onPress={() => onPick(l.code)}
-          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: value === l.code ? colors.brand : colors.line, backgroundColor: value === l.code ? colors.brandSoft : "#fff" }}
+          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: value === l.code ? colors.brand : colors.line, backgroundColor: value === l.code ? colors.brandSoft : colors.surface }}
         >
           <Text style={{ fontWeight: "600", color: value === l.code ? colors.brand : colors.ink }}>{l.name}</Text>
         </Pressable>

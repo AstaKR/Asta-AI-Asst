@@ -220,6 +220,8 @@ export interface QuickResult {
   /** Base64 WAV of the spoken translation, when requested. */
   audio: string | null;
   audio_mime: string | null;
+  /** Seconds spent per step on the server (stt / translate / tts). */
+  timings?: Record<string, number>;
 }
 
 // ---------- AI assistant ----------

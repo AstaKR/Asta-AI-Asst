@@ -209,3 +209,12 @@ def test_hands_free_pair_validation(api, sarvam, pair, extra):
     f = SimpleUploadedFile("talk.wav", wav(1), content_type="audio/wav")
     res = api.post("/api/quick/speech/", {"file": f, "pair": pair, "target_language": "hi", **extra}, format="multipart")
     assert res.status_code == 400
+
+
+def test_timings_and_separate_speak(api, sarvam):
+    res = api.post("/api/quick/text/", {"text": "Hello", "source_language": "en", "target_language": "ta", "speak": False}, format="json")
+    body = res.json()
+    assert body["audio"] is None and "translate" in body["timings"]
+    spoken = api.post("/api/quick/speak/", {"text": body["translation"], "language": "ta"}, format="json")
+    assert spoken.status_code == 200, spoken.content
+    assert spoken.json()["audio"] and "tts" in spoken.json()["timings"]

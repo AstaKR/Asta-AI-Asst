@@ -9,6 +9,7 @@ import io
 import logging
 import os
 import tempfile
+import time
 import wave
 from pathlib import Path
 
@@ -91,22 +92,28 @@ class _QuickView(APIView):
     def _voice(self, request, data) -> str:
         return data.get("voice") or get_preference(request.user).voice or settings.DEFAULT_VOICE
 
-    def _finish(self, request, *, kind, data, original, source, stt_seconds, client: Engines):
+    def _finish(self, request, *, kind, data, original, source, stt_seconds, client: Engines, timings=None):
         # Usage numbers count only billed (Sarvam) work; the local engine is free.
         target = data["target_language"]
         translate_chars = 0
         translation = original
+        timings = dict(timings or {})
+        started = time.perf_counter()
         if source != target:
             if client.billed("translate"):
                 check_budget(translate_chars=len(original))
                 translate_chars = len(original)
             translation = client.translate(original, to_bcp47(source), to_bcp47(target))
+        timings["translate"] = round(time.perf_counter() - started, 3)
         audio, tts_chars = None, 0
+        started = time.perf_counter()
         if data["speak"] and translation:
             if client.billed("tts"):
                 self._check_tts(len(translation))
                 tts_chars = len(translation)
             audio = _join_wavs(client.text_to_speech(translation, to_bcp47(target), self._voice(request, data)))
+            timings["tts"] = round(time.perf_counter() - started, 3)
+        log.info("quick timings %s", timings)
         QuickUsage.objects.create(
             user=request.user,
             kind=kind,
@@ -124,6 +131,7 @@ class _QuickView(APIView):
                 "target_language": target,
                 "audio": base64.b64encode(audio).decode() if audio else None,
                 "audio_mime": "audio/wav" if audio else None,
+                "timings": timings,
             }
         )
 
@@ -194,7 +202,9 @@ class QuickSpeechView(_QuickView):
             if stt_seconds:
                 check_budget(stt_seconds=stt_seconds)
             given = data["source_language"]
+            t0 = time.perf_counter()
             text, detected = client.speech_to_text(wav, None if given == AUTO else to_bcp47(given))
+            stt_time = round(time.perf_counter() - t0, 3)
             if not text:
                 QuickUsage.objects.create(
                     user=request.user, kind=QuickUsage.Kind.SPEECH, source_language="", target_language=data["target_language"], stt_seconds=stt_seconds
@@ -209,7 +219,47 @@ class QuickSpeechView(_QuickView):
                 source = from_bcp47(detected)
                 fields = {**data, "target_language": next(x for x in data["pair"] if x != source)}
             return self._finish(
-                request, kind=QuickUsage.Kind.SPEECH, data=fields, original=text, source=source, stt_seconds=stt_seconds, client=client
+                request, kind=QuickUsage.Kind.SPEECH, data=fields, original=text, source=source, stt_seconds=stt_seconds, client=client,
+                timings={"stt": stt_time},
+            )
+
+        return self._run(go)
+
+
+class SpeakSerializer(serializers.Serializer):
+    text = serializers.CharField(max_length=settings.QUICK_MAX_TEXT_CHARS, trim_whitespace=True)
+    language = serializers.ChoiceField(choices=LANGUAGE_CHOICES)
+    voice = serializers.ChoiceField(choices=settings.SUPPORTED_VOICES, required=False)
+
+
+class QuickSpeakView(_QuickView):
+    """Voice for text that is already translated. Clients show the translation first (call text/speech with
+    speak=false) and fetch the voice here, so the slow text-to-speech step never delays the text."""
+
+    def post(self, request):
+        s = SpeakSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        data = s.validated_data
+
+        def go():
+            client = Engines()
+            tts_chars = 0
+            if client.billed("tts"):
+                self._check_tts(len(data["text"]))
+                tts_chars = len(data["text"])
+            started = time.perf_counter()
+            audio = _join_wavs(client.text_to_speech(data["text"], to_bcp47(data["language"]), self._voice(request, data)))
+            seconds = round(time.perf_counter() - started, 3)
+            log.info("quick speak %.3fs", seconds)
+            QuickUsage.objects.create(
+                user=request.user, kind=QuickUsage.Kind.TEXT, source_language=data["language"], target_language=data["language"], tts_chars=tts_chars
+            )
+            return Response(
+                {
+                    "audio": base64.b64encode(audio).decode() if audio else None,
+                    "audio_mime": "audio/wav" if audio else None,
+                    "timings": {"tts": seconds},
+                }
             )
 
         return self._run(go)
