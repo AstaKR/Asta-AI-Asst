@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text } from "react-native";
 
 import { ApiError, api } from "../api";
 import { useAuth } from "../auth";
@@ -8,98 +8,71 @@ import { Banner, Button, Card, Field, Muted, Screen, Title } from "../components
 
 export default function Login() {
   const { signIn } = useAuth();
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [step, setStep] = useState<"phone" | "code">("phone");
-  const [sentTo, setSentTo] = useState("");
-  const [resendIn, setResendIn] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const id = setTimeout(() => setResendIn(resendIn - 1), 1000);
-    return () => clearTimeout(id);
-  }, [resendIn]);
-
-  async function sendCode() {
+  async function submit() {
     setBusy(true);
     setError("");
     try {
-      const res = await api.requestOtp(phone);
-      setSentTo(res.sent_to);
-      setResendIn(res.resend_in);
-      setStep("code");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not send the code");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verify() {
-    setBusy(true);
-    setError("");
-    try {
-      const res = await api.verifyOtp(phone, code.trim(), name.trim() || undefined);
-      await signIn(res.token, res.user);
+      const { token, ...user } =
+        mode === "login"
+          ? await api.login(username.trim(), password)
+          : await api.register(username.trim(), password, name.trim() || undefined);
+      await signIn(token, user);
       router.replace("/home");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not verify the code");
+      setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
       setBusy(false);
     }
   }
 
+  const isLogin = mode === "login";
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Screen>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <Title>Sign in with your mobile number</Title>
-          <Muted style={{ marginBottom: 16 }}>We send a one-time code by SMS. Your number identifies you for calls.</Muted>
+          <Title>{isLogin ? "Sign in" : "Create your account"}</Title>
+          <Muted style={{ marginBottom: 16 }}>Use the same username and password as on the website.</Muted>
           {error ? <Banner tone="danger">{error}</Banner> : null}
           <Card>
-            {step === "phone" ? (
-              <>
-                <Field
-                  label="Mobile number"
-                  placeholder="98765 43210"
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  textContentType="telephoneNumber"
-                  value={phone}
-                  onChangeText={setPhone}
-                  maxLength={16}
-                />
-                <Text style={{ color: "#64748b", fontSize: 12, marginBottom: 12 }}>Indian numbers (+91) only for now.</Text>
-                <Button label="Send code" onPress={sendCode} busy={busy} disabled={phone.replace(/\D/g, "").length < 10} />
-              </>
-            ) : (
-              <>
-                <Muted style={{ marginBottom: 12 }}>Code sent to {sentTo}.</Muted>
-                <Field
-                  label="6-digit code"
-                  placeholder="123456"
-                  keyboardType="number-pad"
-                  autoComplete="sms-otp"
-                  textContentType="oneTimeCode"
-                  value={code}
-                  onChangeText={setCode}
-                  maxLength={8}
-                />
-                <Field label="Your name (shown on calls, first time only)" value={name} onChangeText={setName} maxLength={60} />
-                <Button label="Verify and continue" onPress={verify} busy={busy} disabled={code.trim().length < 4} />
-                <Button
-                  label={resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
-                  variant="secondary"
-                  onPress={sendCode}
-                  disabled={resendIn > 0 || busy}
-                  style={{ marginTop: 10 }}
-                />
-                <Button label="Change number" variant="secondary" onPress={() => setStep("phone")} style={{ marginTop: 10 }} />
-              </>
-            )}
+            <Field
+              label="Username"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="username"
+              textContentType="username"
+              value={username}
+              onChangeText={setUsername}
+              maxLength={30}
+            />
+            {!isLogin ? <Field label="Name shown on calls" value={name} onChangeText={setName} maxLength={60} /> : null}
+            <Field
+              label="Password"
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              textContentType={isLogin ? "password" : "newPassword"}
+              value={password}
+              onChangeText={setPassword}
+              maxLength={128}
+            />
+            <Button
+              label={isLogin ? "Sign in" : "Create account"}
+              onPress={submit}
+              busy={busy}
+              disabled={username.trim().length < 3 || password.length < (isLogin ? 1 : 8)}
+            />
+            <Pressable onPress={() => { setMode(isLogin ? "register" : "login"); setError(""); }} style={{ marginTop: 14 }}>
+              <Text style={{ color: "#2563eb", textAlign: "center" }}>
+                {isLogin ? "New here? Create an account" : "Already have an account? Sign in"}
+              </Text>
+            </Pressable>
           </Card>
         </ScrollView>
       </Screen>

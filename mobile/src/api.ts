@@ -90,8 +90,16 @@ export const api = {
   requestOtp: (phone: string) => request<{ sent_to: string; expires_in: number; resend_in: number }>("/auth/otp/request/", "POST", { phone }),
   verifyOtp: (phone: string, code: string, display_name?: string) =>
     request<{ token: string; is_new: boolean; user: User }>("/auth/otp/verify/", "POST", { phone, code, display_name }),
+  login: (username: string, password: string) =>
+    request<User & { token: string }>("/auth/login/", "POST", { username, password, want_token: true }),
+  register: (username: string, password: string, display_name?: string) =>
+    request<User & { token: string }>("/auth/register/", "POST", { username, password, display_name, want_token: true }),
   me: () => request<User>("/auth/me/"),
   logout: () => request<void>("/auth/logout/", "POST"),
+  requestPhoneCode: (phone: string) =>
+    request<{ sent_to: string; expires_in: number; resend_in: number }>("/auth/phone/request/", "POST", { phone }),
+  verifyPhone: (phone: string, code: string) => request<User>("/auth/phone/verify/", "POST", { phone, code }),
+  removePhone: () => request<User>("/auth/phone/verify/", "DELETE"),
   savePreferences: (prefs: Partial<Preferences>) => request<Preferences>("/preferences/", "PUT", prefs),
   rooms: () => request<Room[]>("/rooms/"),
   createRoom: (sel: LanguageSelection, video = false) => request<Room>("/rooms/", "POST", { ...sel, video }),

@@ -100,6 +100,10 @@ export const api = {
   register: (username: string, password: string, display_name: string) =>
     request<User>("/auth/register/", "POST", { username, password, display_name }),
   logout: () => request<void>("/auth/logout/", "POST"),
+  requestPhoneCode: (phone: string) =>
+    request<{ sent_to: string; expires_in: number; resend_in: number }>("/auth/phone/request/", "POST", { phone }),
+  verifyPhone: (phone: string, code: string) => request<User>("/auth/phone/verify/", "POST", { phone, code }),
+  removePhone: () => request<User>("/auth/phone/verify/", "DELETE"),
   savePreferences: (prefs: Partial<Preferences>) => request<Preferences>("/preferences/", "PUT", prefs),
   rooms: () => request<Room[]>("/rooms/"),
   createRoom: (sel: LanguageSelection, video = false) => request<Room>("/rooms/", "POST", { ...sel, video }),

@@ -11,6 +11,90 @@ import type { UsageSummary } from "../../types";
 
 const VOLUMES = [0, 15, 30, 60];
 
+function PhoneCard() {
+  const { user, refresh } = useAuth();
+  const current = user?.phone_number ?? null;
+  const [editing, setEditing] = useState(!current);
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [sentTo, setSentTo] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function run(fn: () => Promise<void>, fallback: string) {
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : fallback);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <Text style={styles.label}>Mobile number</Text>
+      <Muted style={{ marginBottom: 12 }}>Add your number so people can call you by it. We verify it with an SMS code.</Muted>
+      {error ? <Banner tone="danger">{error}</Banner> : null}
+      {current && !editing ? (
+        <>
+          <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 10 }}>{current} · Verified</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Button label="Change" variant="secondary" onPress={() => setEditing(true)} style={{ flex: 1 }} />
+            <Button
+              label="Remove"
+              variant="secondary"
+              disabled={busy}
+              style={{ flex: 1 }}
+              onPress={() =>
+                run(async () => {
+                  await api.removePhone();
+                  await refresh();
+                  setEditing(true);
+                }, "Could not remove the number")
+              }
+            />
+          </View>
+        </>
+      ) : !sentTo ? (
+        <>
+          <Field label="Mobile number (India, +91)" placeholder="98765 43210" keyboardType="phone-pad" autoComplete="tel" value={phone} onChangeText={setPhone} maxLength={16} />
+          <Button
+            label="Send code"
+            busy={busy}
+            disabled={phone.replace(/\D/g, "").length < 10}
+            onPress={() => run(async () => setSentTo((await api.requestPhoneCode(phone)).sent_to), "Could not send the code")}
+          />
+          {current ? <Button label="Cancel" variant="secondary" onPress={() => setEditing(false)} style={{ marginTop: 10 }} /> : null}
+        </>
+      ) : (
+        <>
+          <Muted style={{ marginBottom: 8 }}>Code sent to {sentTo}.</Muted>
+          <Field label="6-digit code" keyboardType="number-pad" autoComplete="sms-otp" textContentType="oneTimeCode" value={code} onChangeText={setCode} maxLength={8} />
+          <Button
+            label="Verify number"
+            busy={busy}
+            disabled={code.trim().length < 4}
+            onPress={() =>
+              run(async () => {
+                await api.verifyPhone(phone, code.trim());
+                await refresh();
+                setSentTo("");
+                setCode("");
+                setPhone("");
+                setEditing(false);
+              }, "Could not verify the code")
+            }
+          />
+          <Button label="Change number" variant="secondary" onPress={() => setSentTo("")} style={{ marginTop: 10 }} />
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function Settings() {
   const { user, refresh, signOut } = useAuth();
   const prefs = user!.preferences;
@@ -39,6 +123,7 @@ export default function Settings() {
     <Screen>
       <ScrollView>
         <PlanCard />
+        <PhoneCard />
         {msg ? <Banner tone="info">{msg}</Banner> : null}
         <Card>
           <Field label="Name shown on calls" value={name} onChangeText={setName} maxLength={60} />

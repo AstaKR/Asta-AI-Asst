@@ -49,6 +49,7 @@ export function SettingsPage() {
     <Layout>
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <PlanCard />
+      <PhoneCard />
       <div className="card mt-6 space-y-6 p-6">
         {error && <ErrorBanner message={error} />}
         <label className="block">
@@ -91,6 +92,126 @@ export function SettingsPage() {
         <p className="mt-3 text-sm text-muted">Usage is unavailable.</p>
       )}
     </Layout>
+  );
+}
+
+function PhoneCard() {
+  const { user, setUser } = useAuth();
+  const current = user?.phone_number ?? null;
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [sentTo, setSentTo] = useState("");
+  const [editing, setEditing] = useState(!current);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function run(fn: () => Promise<void>, fallback: string) {
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : fallback);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card mt-6 space-y-4 p-6">
+      <div>
+        <p className="eyebrow">Mobile number</p>
+        <p className="mt-1 text-sm text-muted">Add your number so people can call you by it. We verify it with an SMS code.</p>
+      </div>
+      {error && <ErrorBanner message={error} />}
+      {current && !editing ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-medium">{current}</span>
+          <span className="chip bg-brand-soft text-brand">Verified</span>
+          <button className="btn-secondary" onClick={() => setEditing(true)}>
+            Change
+          </button>
+          <button
+            className="btn-secondary"
+            disabled={busy}
+            onClick={() =>
+              void run(async () => {
+                setUser(await api.removePhone());
+                setEditing(true);
+              }, "Could not remove the number")
+            }
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {!sentTo ? (
+            <>
+              <label className="block">
+                <span className="label">Mobile number (India, +91)</span>
+                <input
+                  className="field"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="98765 43210"
+                  value={phone}
+                  maxLength={16}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </label>
+              <button
+                className="btn-primary"
+                disabled={busy || phone.replace(/\D/g, "").length < 10}
+                onClick={() => void run(async () => setSentTo((await api.requestPhoneCode(phone)).sent_to), "Could not send the code")}
+              >
+                Send code
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted">Code sent to {sentTo}.</p>
+              <label className="block">
+                <span className="label">6-digit code</span>
+                <input className="field" inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={8} onChange={(e) => setCode(e.target.value)} />
+              </label>
+              <div className="flex gap-3">
+                <button
+                  className="btn-primary"
+                  disabled={busy || code.trim().length < 4}
+                  onClick={() =>
+                    void run(async () => {
+                      setUser(await api.verifyPhone(phone, code.trim()));
+                      setSentTo("");
+                      setCode("");
+                      setPhone("");
+                      setEditing(false);
+                    }, "Could not verify the code")
+                  }
+                >
+                  Verify number
+                </button>
+                <button className="btn-secondary" disabled={busy} onClick={() => setSentTo("")}>
+                  Change number
+                </button>
+              </div>
+            </>
+          )}
+          {current && (
+            <button
+              className="text-sm text-muted underline"
+              onClick={() => {
+                setEditing(false);
+                setSentTo("");
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -9,7 +9,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -36,6 +36,14 @@ class CsrfView(APIView):
         return Response({"detail": "ok"})
 
 
+def _with_token(request, user, payload: dict) -> dict:
+    """Mobile clients send {"want_token": true} and get an API token back; web keeps the session cookie only."""
+    if request.data.get("want_token") is True:
+        token, _ = Token.objects.get_or_create(user=user)
+        return {**payload, "token": token.key}
+    return payload
+
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
@@ -46,7 +54,7 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         login(request, user)
-        return Response(user_payload(user), status=status.HTTP_201_CREATED)
+        return Response(_with_token(request, user, user_payload(user)), status=status.HTTP_201_CREATED)
 
 
 class LoginView(APIView):
@@ -61,7 +69,7 @@ class LoginView(APIView):
         if user is None:
             return Response({"detail": "Invalid username or password."}, status=status.HTTP_400_BAD_REQUEST)
         login(request, user)
-        return Response(user_payload(user))
+        return Response(_with_token(request, user, user_payload(user)))
 
 
 class LogoutView(APIView):
@@ -75,6 +83,10 @@ class LogoutView(APIView):
 class OTPRequestView(APIView):
     """Send a login code to an Indian mobile number."""
 
+    def check_phone(self, request, phone):
+        """Hook: return a Response to refuse sending a code to this number."""
+        return None
+
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp"
@@ -86,6 +98,9 @@ class OTPRequestView(APIView):
             phone = phone_utils.normalize_phone(data.validated_data["phone"])
         except phone_utils.InvalidPhone as exc:
             return Response({"phone": [str(exc)]}, status=400)
+        refusal = self.check_phone(request, phone)
+        if refusal is not None:
+            return refusal
         now = timezone.now()
         recent = OTPChallenge.objects.filter(phone=phone, created_at__gte=now - timedelta(hours=1))
         if recent.count() >= settings.OTP_MAX_PER_PHONE_PER_HOUR:
@@ -156,6 +171,61 @@ class OTPVerifyView(APIView):
                 user = record.user
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key, "is_new": is_new, "user": user_payload(user)})
+
+
+class PhoneLinkRequestView(OTPRequestView):
+    """Signed-in user adds a mobile number: sends a code to it."""
+
+    permission_classes = [IsAuthenticated]
+
+    def check_phone(self, request, phone):
+        taken = PhoneNumber.objects.filter(number=phone).exclude(user=request.user).exists()
+        if taken:
+            return Response({"detail": "That number is already linked to another account.", "code": "phone_taken"}, status=409)
+        return None
+
+
+class PhoneLinkVerifyView(APIView):
+    """Verify the code and attach the number to the signed-in account (replaces any previous number)."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    def post(self, request):
+        data = OTPVerifySerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            phone = phone_utils.normalize_phone(data.validated_data["phone"])
+        except phone_utils.InvalidPhone as exc:
+            return Response({"phone": [str(exc)]}, status=400)
+        with transaction.atomic():
+            challenge = (
+                OTPChallenge.objects.select_for_update()
+                .filter(phone=phone, consumed=False, expires_at__gt=timezone.now())
+                .first()
+            )
+            if challenge is None:
+                return Response({"detail": "Incorrect or expired code.", "code": "otp_invalid"}, status=400)
+            if challenge.attempts >= settings.OTP_MAX_ATTEMPTS:
+                challenge.consumed = True
+                challenge.save(update_fields=["consumed"])
+                return Response({"detail": "Too many wrong attempts. Request a new code.", "code": "otp_locked"}, status=400)
+            if not hmac.compare_digest(phone_utils.hash_code(phone, data.validated_data["code"]), challenge.code_hash):
+                challenge.attempts += 1
+                challenge.save(update_fields=["attempts"])
+                return Response({"detail": "Incorrect or expired code.", "code": "otp_invalid"}, status=400)
+            challenge.consumed = True
+            challenge.save(update_fields=["consumed"])
+            if PhoneNumber.objects.filter(number=phone).exclude(user=request.user).exists():
+                return Response({"detail": "That number is already linked to another account.", "code": "phone_taken"}, status=409)
+            PhoneNumber.objects.update_or_create(user=request.user, defaults={"number": phone, "verified_at": timezone.now()})
+        request.user.refresh_from_db()
+        return Response(user_payload(request.user))
+
+    def delete(self, request):
+        PhoneNumber.objects.filter(user=request.user).delete()
+        return Response(user_payload(request.user))
 
 
 class MeView(APIView):
