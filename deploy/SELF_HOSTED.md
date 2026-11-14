@@ -1,31 +1,25 @@
-# Deploying on your own server (with free local AI)
+# Deploying on your own server (cloud AI by API key)
 
 Target: **2 × Intel Xeon Silver 4110 (16 cores / 32 threads), 64 GB RAM, 2.1 TB RAID 5, no GPU.**
 
-This machine runs the web app, API, database, meeting jobs, call worker and the free AI models. Call audio goes
-through **LiveKit Cloud** (project "Asta AI", free Build plan), so the server needs no call ports.
-Sarvam/Claude stay available as optional cloud engines. (Running LiveKit on this server instead is described at the end.)
+This machine runs the web app, API, database, meeting jobs and the call worker. Call audio goes through **LiveKit Cloud**
+(project "Asta AI", free Build plan), so the server needs no call ports. All AI runs in the cloud by API key:
+**Sarvam** (translation, speech recognition, speech output) and **Claude** (meeting notes, assistant, photo translate).
+(Running LiveKit on this server instead is described at the end. Local models are no longer deployed; see docs/LOCAL_AI.md.)
 
 > Status: these files are written and the YAML is validated, but they have **not been run on a Linux server yet**.
 > The first deployment is the test — go step by step and check each one.
 
-## 1. What the server can handle
+## 1. What the server needs
 
 | Part | RAM | Note |
 |---|---|---|
-| Postgres, Django, worker, Caddy | ~3 GB | |
-| IndicTrans2 (3 models) | ~4 GB | |
-| Whisper `large-v3-turbo` (meetings) + `small` (live) | ~4 GB | much better Tamil than the laptop's `small` |
-| Indic Parler-TTS | ~4 GB | |
-| Qwen3 30B-A3B Instruct summaries + assistant chat (Ollama) | ~20 GB | Apache-2.0; uses ~3B parameters per word, so it is fast on CPU |
-| Qwen3-VL 8B Instruct photo translate (Ollama) | ~7 GB | Apache-2.0; loaded only while used |
-| **Total** | **~42 GB of 64 GB** | room for the OS, file cache and growth |
+| Postgres, Django, jobs, worker, Caddy | ~3 GB | |
+| OS, file cache, growth | the rest | 8 GB RAM is enough; the Xeon server has far more than needed |
 
-**Speed:** this is a CPU-only server, and the Xeon 4110 runs at 2.1 GHz. It has many cores, but each core is slower
-than a modern laptop's. Expect meetings and the Translate page to work well (batch work, seconds per request).
-**Live translated calls with local models will be turn-by-turn with several seconds of delay** — Parler-TTS is the
-slowest part. Measure it after setup (step 9). If it's too slow, either keep `SPEECH_PROVIDER=sarvam` for live calls
-(everything else stays free) or add an NVIDIA GPU later (needs code support for `cuda`, not added yet).
+There are no AI models on the server, so no GPU, no model downloads and no Hugging Face account. Speed depends on
+Sarvam and Claude (measured with `scripts/sarvam_smoke_test.py`: about 2.5–3 s from end of speech to translated audio).
+Cost grows with use: watch the admin dashboard and keep the daily limits in `.env`.
 
 **RAID 5** protects against one failed disk — it is **not a backup**. See step 10.
 
@@ -36,14 +30,14 @@ With LiveKit Cloud, phones send call audio to LiveKit, not to this server. The s
 | Port | Use |
 |---|---|
 | 80, 443 TCP (inbound) | website, API, HTTPS certificates |
-| outbound HTTPS/WSS | the worker connects out to LiveKit Cloud; models download from Hugging Face and Ollama |
+| outbound HTTPS/WSS | the worker connects out to LiveKit Cloud and Sarvam; the backend calls Sarvam and Anthropic |
 
 You need:
 * **A public IP** on the server (static is best), or your router forwarding ports 80 and 443 to it.
 * **One DNS name** pointing to that IP, e.g. `call.levelupsystems.in`.
 * **LiveKit Cloud API key:** cloud.livekit.io → project "Asta AI" → Settings → API keys → create a key. Note the
   project URL (`wss://….livekit.cloud`), the API key and the API secret. Never paste the secret anywhere but `.env`.
-* **Hugging Face read token** with the four AI4Bharat model terms accepted (docs/LOCAL_AI.md step 2).
+* **Sarvam API key** (dashboard.sarvam.ai) and **Anthropic API key** (console.anthropic.com).
 
 ## 3. Install the operating system
 
@@ -97,9 +91,10 @@ nano .env
 ```
 
 In `nano`, fill the values it lists: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (from LiveKit Cloud),
-`HF_TOKEN`, and `SARVAM_API_KEY` if you use Sarvam for live calls. Save with Ctrl+O, exit with Ctrl+X.
-The defaults already use the free local AI (`AI_ENGINE=local`, `SUMMARY_PROVIDER=ollama`, `ASSISTANT_PROVIDER=ollama`)
-and Sarvam for live calls (`SPEECH_PROVIDER=sarvam`, switch after step 9).
+`SARVAM_API_KEY` and `ANTHROPIC_API_KEY`. (Or leave the two AI keys empty and add them later in the app's
+Admin → API keys page; they are stored encrypted.) Save with Ctrl+O, exit with Ctrl+X.
+The defaults already use cloud AI: `AI_ENGINE=sarvam`, `MEETING_STT_ENGINE=sarvam`, `SUMMARY_PROVIDER=anthropic`,
+`ASSISTANT_PROVIDER=anthropic`, `SPEECH_PROVIDER=sarvam`.
 
 The server is the only place this file exists — keep a copy of it in a password manager.
 
@@ -108,12 +103,8 @@ The server is the only place this file exists — keep a copy of it in a passwor
 ```bash
 echo 'alias asta="docker compose -f ~/asta/deploy/docker-compose.yml -f ~/asta/deploy/docker-compose.selfhosted.yml --env-file ~/asta/.env"' >> ~/.bashrc && source ~/.bashrc
 
-# App + database + jobs + worker + local AI + Ollama (first build takes 15–30 minutes)
+# App + database + jobs + worker (first build takes a few minutes)
 asta up -d --build
-
-# Summary/assistant and photo models (about 25 GB download, once). Use the -instruct tags.
-asta exec ollama ollama pull qwen3:30b-instruct
-asta exec ollama ollama pull qwen3-vl:8b-instruct
 asta ps
 ```
 
@@ -131,18 +122,16 @@ Open `https://call.levelupsystems.in`, register an account, run `grant_admin` fo
 ```bash
 curl https://call.levelupsystems.in/api/health/
 asta logs -f worker          # should show "registered worker"
-asta logs -f local-ai        # model downloads appear on first use
 ```
 
-The first translation, transcription and speech request each download a model (1–4 GB) — the first request of each
-kind is slow; after that they stay in memory. In the app, the **Translate** page shows which engine is used.
+In the app, the **Translate** page shows which engine is used (it should say Sarvam).
 
-## 9. Measure before relying on local live calls
+## 9. Check the AI keys
 
-On the Translate page: translate a paragraph, press **Listen** in Tamil and Hindi, and note the times. Upload a
-5-minute Tamil meeting and note how long transcription takes. Then try one call with `SPEECH_PROVIDER=local`
-(`asta up -d worker` after changing `.env`). If the delay between turns is acceptable, keep it; otherwise set it back
-to `sarvam`. Have native Tamil and Hindi speakers judge the voices before customers hear them.
+On the Translate page translate a paragraph and press **Listen** in Tamil and Hindi. Upload a short Tamil meeting
+and generate notes. Then make one test call. Have native Tamil and Hindi speakers judge the voices. The admin
+dashboard shows the estimated cost per day; compare it with the Sarvam and Anthropic invoices and adjust the
+`COST_*` values and the daily limits.
 
 ## 10. Backups (RAID is not a backup)
 
@@ -179,9 +168,9 @@ APK (see `mobile/README.md`).
 | Site doesn't open / no HTTPS | DNS points to the server; ports 80/443 reach it; `asta logs web` |
 | Calls do not connect | `asta logs worker` shows it registered; `LIVEKIT_URL`/key/secret match LiveKit Cloud → API keys |
 | Calls stop working one day | LiveKit Cloud → Usage and limits: the free Build plan's monthly allowance may be used up |
-| "Local AI … not available" | `asta logs local-ai`; Hugging Face terms accepted for all four models; `HF_TOKEN` set |
-| Summaries fail | `asta exec ollama ollama list` shows `qwen3:30b-instruct` |
-| Server slow | `docker stats`; lower `LOCAL_MT_BEAMS` to 1 or use `LOCAL_WHISPER_MODEL=medium` |
+| Translation or speech fails | `asta logs backend` and `asta logs worker`; `SARVAM_API_KEY` set (or added in Admin → API keys); Sarvam credit left |
+| Notes or assistant fail | `ANTHROPIC_API_KEY` set; Anthropic credit left; `asta logs jobs` |
+| Bill too high | admin dashboard costs; lower the `DAILY_*` limits, use `claude-haiku-5-5`, or set `TRANSLATION_ENABLED=false` |
 
 ## Optional: run LiveKit on this server instead of LiveKit Cloud
 
