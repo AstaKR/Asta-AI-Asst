@@ -41,6 +41,9 @@ def render_transcript(title: str, lines: list[TranscriptLine]) -> str:
 class SummaryProvider(ABC):
     name = "base"
     model = ""
+    # Tokens used by the latest summarize() call; only paid providers fill these in.
+    input_tokens = 0
+    output_tokens = 0
 
     @abstractmethod
     def summarize(self, title: str, lines: list[TranscriptLine], language: str) -> MeetingNotes:

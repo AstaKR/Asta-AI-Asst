@@ -11,6 +11,49 @@ import type { UsageSummary } from "../../types";
 
 const VOLUMES = [0, 15, 30, 60];
 
+function PasswordCard() {
+  const [open, setOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    try {
+      await api.changePassword(oldPassword, newPassword);
+      setOldPassword("");
+      setNewPassword("");
+      setOpen(false);
+      setMsg("Password changed.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not change the password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <Text style={styles.label}>Password</Text>
+      {msg ? <Muted style={{ marginBottom: 8 }}>{msg}</Muted> : null}
+      {error ? <Banner tone="danger">{error}</Banner> : null}
+      {!open ? (
+        <Button label="Change password" variant="secondary" onPress={() => { setOpen(true); setMsg(""); }} />
+      ) : (
+        <>
+          <Field label="Current password" secureTextEntry autoCapitalize="none" autoComplete="current-password" value={oldPassword} onChangeText={setOldPassword} maxLength={128} />
+          <Field label="New password (8+ characters)" secureTextEntry autoCapitalize="none" autoComplete="new-password" value={newPassword} onChangeText={setNewPassword} maxLength={128} />
+          <Button label="Save password" busy={busy} disabled={!oldPassword || newPassword.length < 8} onPress={submit} />
+          <Button label="Cancel" variant="secondary" onPress={() => { setOpen(false); setError(""); }} style={{ marginTop: 10 }} />
+        </>
+      )}
+    </Card>
+  );
+}
+
 function PhoneCard() {
   const { user, refresh } = useAuth();
   const current = user?.phone_number ?? null;
@@ -124,6 +167,7 @@ export default function Settings() {
       <ScrollView>
         <PlanCard />
         <PhoneCard />
+        <PasswordCard />
         {msg ? <Banner tone="info">{msg}</Banner> : null}
         <Card>
           <Field label="Name shown on calls" value={name} onChangeText={setName} maxLength={60} />

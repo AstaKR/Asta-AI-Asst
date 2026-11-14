@@ -16,7 +16,7 @@ end to end with credentials and real users (see [TEST_REPORT.md](TEST_REPORT.md)
 - `SARVAM_STT_API=legacy` and `SARVAM_TTS_MODE=stream` are implemented from docs but have lower confidence.
 - Local `livekit-server --dev` is not reachable from other devices without network configuration; use LiveKit Cloud
   or a properly deployed server for real two-device calls.
-- Accounts are username/password only; no email verification, password reset, or social login.
+- Accounts are username/password. A mobile number is added and verified in Settings. A forgotten password is reset by an SMS code sent to that number, so users with no verified number need an administrator. No email verification or social login.
 - Usage limits are global per deployment (budget protection), not per user.
 - Browser support: tested build targets evergreen browsers; output-device selection works only where
   `setSinkId` exists (Chrome/Edge). Mobile Safari autoplay requires the "Tap to enable call audio" button.
@@ -68,7 +68,7 @@ credit exhaustion stops processing without retries · `TRANSLATION_ENABLED=false
 - [ ] Run the worker with `python -m translation_worker.main start` under a process manager; scale horizontally
 - [ ] Secret management (not plain `.env` on servers); rotate keys; separate dev/prod Sarvam keys with spending limits
 - [ ] Monitoring: worker errors, provider error rates, latency p95, usage vs budget alerts
-- [ ] Account hardening: email verification, password reset, lockout, optional SSO
+- [ ] Account hardening: email verification, lockout, optional SSO (password reset by SMS is done)
 - [ ] Privacy review: user-facing privacy notice, provider DPA/terms, DPDP compliance
 - [ ] Load test concurrency against provider rate limits (STT 20 concurrent sockets, TTS 30/min on starter plan)
 - [ ] Accessibility review of the call screen (keyboard, screen reader live regions) and mobile device testing

@@ -235,6 +235,8 @@ def summarize_meeting(meeting: Meeting, *, summarizer=None) -> dict:
                 summary_text=summary_text,
                 summary_model=f"{summarizer.name}:{summarizer.model}",
                 summary_generated_at=timezone.now(),
+                summary_input_tokens=meeting.summary_input_tokens + getattr(summarizer, "input_tokens", 0),
+                summary_output_tokens=meeting.summary_output_tokens + getattr(summarizer, "output_tokens", 0),
             )
     finally:
         _set(meeting, status=previous if previous != Meeting.Status.SUMMARIZING else Meeting.Status.COMPLETED)

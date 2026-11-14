@@ -36,11 +36,11 @@ Legend: [x] done & verified · [~] implemented, verification pending (needs cred
 - [x] README (Windows first), API, architecture, provider evaluation, limitations/privacy/costs/production checklist, test report
 
 ## Mobile & phone calls — step 1 (no accounts needed)
-- [x] Mobile-number login: OTP request/verify, hashed single-use codes, expiry, lockout, resend cooldown, hourly cap, token auth (11 tests)
+- [x] Mobile-number sign-in (OTP; still available, but the apps now use username/password): OTP request/verify, hashed single-use codes, expiry, lockout, resend cooldown, hourly cap, token auth (11 tests)
 - [~] Real SMS delivery — needs a DLT-registered SMS provider (dev: codes printed to backend log)
 - [x] Worker: phone-line (SIP) callers translated; auto language detection; same-language skip; consent announcement (cached) (7 new tests)
 - [x] Web + app: phone callers receive only the translation (mic restricted to the translator while translation works)
-- [x] Android app (Expo SDK 58): OTP login, home, call screen (subtitles, mute, speaker/earpiece, ducking), summary, settings, call-forwarding guide
+- [x] Android app (Expo SDK 58): username/password login, home, call screen (subtitles, mute, speaker/earpiece, ducking), summary, settings, call-forwarding guide
 - [x] App checks: typecheck, expo-doctor 20/20, Android JS bundle export
 - [!] App on a real phone — needs an EAS (Expo) account or Android Studio
 - [~] Cloud deployment files (Docker Compose: Postgres, Django/gunicorn, worker, Caddy HTTPS); `check --deploy` passes; Docker build not yet run
@@ -88,7 +88,9 @@ Legend: [x] done & verified · [~] implemented, verification pending (needs cred
 - [x] Admin dashboard (`adminpanel`): estimated ₹ cost per day (Sarvam + Claude, configurable rates), today's budget meters, activity table, top users; users (search, plan change, deactivate → signs out); plan editing; `manage.py grant_admin` — 15 tests
 - [x] Abandoned rooms count at most their max length in usage
 - [x] Web redesign: token-based light/dark theme (follows OS + toggle), sidebar app shell with mobile drawer, admin section, plan card in Settings
-- [ ] Meeting-notes Claude tokens are not yet metered into the cost estimate
+- [x] Meeting-notes Claude tokens are metered per meeting and included in the admin cost estimate (local Ollama notes are free)
+- [x] Username/password on web and app; mobile number added and verified in Settings (needed for calls by number); change password; forgot password by SMS code to the verified number — 11 tests
+- [ ] Email verification and account lockout; users with no verified number must ask an administrator to reset a forgotten password
 - [ ] Payments (Razorpay) — not connected; plan changes are manual
 - [x] Mobile redesign: bottom tabs (Calls, Translate, Assistant, Meetings, Settings), Translate tools hub, vector icons instead of emoji, refreshed UI kit (list rows, tiles, icon badges, card shadows, colours matching web), plan card in Settings — typecheck, expo-doctor 20/20, bundle (icons are JS + font: no new native build needed)
 - [x] Voice clone research: `docs/VOICE_CLONE_RESEARCH.md` (Sarvam / ElevenLabs / Google / Azure, consent design)

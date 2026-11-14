@@ -62,7 +62,13 @@ class OverviewView(APIView):
         rooms = _by_day(CallRoom.objects.filter(created_at__gte=since, started_at__isnull=False), "created_at", n=Count("id"))
         users = _by_day(User.objects.filter(date_joined__gte=since), "date_joined", n=Count("id"))
         phones = _by_day(PhoneCall.objects.filter(created_at__gte=since), "created_at", n=Count("id"))
-        # Summary notes are not token-metered per call yet; their cost is not in these estimates.
+        # Claude meeting notes: tokens are stored on the meeting (local Ollama notes cost nothing).
+        notes = _by_day(
+            Meeting.objects.filter(summary_generated_at__gte=since, summary_model__startswith="anthropic:"),
+            "summary_generated_at",
+            i=Sum("summary_input_tokens"),
+            o=Sum("summary_output_tokens"),
+        )
 
         series = []
         for i in range(days):
@@ -83,7 +89,7 @@ class OverviewView(APIView):
                     "stt_minutes": round(stt / 60, 1),
                     "translate_chars": tr,
                     "tts_chars": tts,
-                    "cost_inr": estimate_inr(stt, tr, tts, g(claude, "i"), g(claude, "o")),
+                    "cost_inr": estimate_inr(stt, tr, tts, g(claude, "i") + g(notes, "i"), g(claude, "o") + g(notes, "o")),
                 }
             )
 

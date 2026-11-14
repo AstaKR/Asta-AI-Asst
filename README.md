@@ -15,7 +15,7 @@ Person B speaks Hindi ─► STT (hi) ─► translate hi→ta ─► TTS (ta) �
 
 | Area | State |
 |---|---|
-| Django API (auth, OTP, rooms, tokens, limits, usage, meetings) | Implemented, 74 automated tests passing |
+| Django API (accounts, phone linking, password reset, rooms, tokens, limits, usage, meetings) | Implemented, 213 automated tests passing |
 | **Meeting Assistant** (record / upload / live translate, timestamped transcripts, translation, AI notes, search, exports) | **Verified with real Sarvam** for upload and live paths (`scripts/integration_meeting_test.py`); AI notes mock-tested only — needs `ANTHROPIC_API_KEY`. See [docs/MEETINGS.md](docs/MEETINGS.md) |
 | Two-person WebRTC call through LiveKit | **Verified** on a real local LiveKit server (`scripts/integration_call_test.py`) |
 | Translation worker routing / per-listener track isolation | **Verified** on a real LiveKit server with a test-only tone provider (`scripts/integration_routing_test.py`) |

@@ -100,6 +100,12 @@ export const api = {
     request<{ sent_to: string; expires_in: number; resend_in: number }>("/auth/phone/request/", "POST", { phone }),
   verifyPhone: (phone: string, code: string) => request<User>("/auth/phone/verify/", "POST", { phone, code }),
   removePhone: () => request<User>("/auth/phone/verify/", "DELETE"),
+  changePassword: (old_password: string, new_password: string) =>
+    request<void>("/auth/password/change/", "POST", { old_password, new_password }),
+  requestPasswordReset: (phone: string) =>
+    request<{ sent_to: string; expires_in: number; resend_in: number }>("/auth/password/reset/request/", "POST", { phone }),
+  confirmPasswordReset: (phone: string, code: string, new_password: string) =>
+    request<void>("/auth/password/reset/confirm/", "POST", { phone, code, new_password }),
   savePreferences: (prefs: Partial<Preferences>) => request<Preferences>("/preferences/", "PUT", prefs),
   rooms: () => request<Room[]>("/rooms/"),
   createRoom: (sel: LanguageSelection, video = false) => request<Room>("/rooms/", "POST", { ...sel, video }),

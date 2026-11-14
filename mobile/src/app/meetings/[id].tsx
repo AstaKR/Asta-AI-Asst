@@ -50,6 +50,8 @@ export default function MeetingDetailScreen() {
   }, [id]);
 
   useEffect(() => {
+    // Loading on mount is the intended effect; load() sets state when data arrives.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
     meetingsApi.config().then(setConfig).catch(() => undefined);
   }, [load]);

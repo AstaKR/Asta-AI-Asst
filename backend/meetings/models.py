@@ -65,6 +65,9 @@ class Meeting(models.Model):
     summary_language = models.CharField(max_length=4, choices=LANGUAGE_CHOICES, default="en")
     summary_model = models.CharField(max_length=60, blank=True)
     summary_generated_at = models.DateTimeField(null=True, blank=True)
+    # Paid-model tokens used for the notes (adds up over regenerations); feeds the admin cost estimate.
+    summary_input_tokens = models.PositiveBigIntegerField(default=0)
+    summary_output_tokens = models.PositiveBigIntegerField(default=0)
     summary_error = models.CharField(max_length=500, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -90,6 +90,8 @@ export default function CallScreen() {
   }, [code]);
 
   useEffect(() => {
+    // Connecting on mount is the intended effect; connect() sets state as it progresses.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void connect();
   }, [connect]);
 
@@ -173,7 +175,7 @@ function CallView({ code, session, error }: { code: string; session: TokenRespon
   const [facing, setFacing] = useState<"user" | "environment">("user");
   const [ending, setEnding] = useState(false);
   const [, bump] = useReducer((n: number) => n + 1, 0);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);

@@ -37,6 +37,25 @@ class RegisterSerializer(serializers.Serializer):
         return user
 
 
+def check_new_password(raw: str, user=None) -> str:
+    try:
+        password_validation.validate_password(raw, user)
+    except Exception as exc:  # django ValidationError -> DRF error on the password field
+        raise serializers.ValidationError(list(getattr(exc, "messages", [str(exc)])))
+    return raw
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, max_length=128)
+    new_password = serializers.CharField(write_only=True, max_length=128)
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    code = serializers.RegexField(r"^\d{4,8}$", error_messages={"invalid": "Enter the code from the SMS."})
+    new_password = serializers.CharField(write_only=True, max_length=128)
+
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=30)
     password = serializers.CharField(write_only=True, max_length=128)

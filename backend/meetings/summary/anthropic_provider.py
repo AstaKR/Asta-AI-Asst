@@ -41,6 +41,9 @@ class AnthropicSummaryProvider(SummaryProvider):
                 },
             )
 
+        usage = getattr(response, "usage", None)
+        self.input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
+        self.output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
         if response.stop_reason == "refusal":
             raise ProviderRequestError("The AI declined to summarize this transcript.")
         if response.stop_reason == "max_tokens":

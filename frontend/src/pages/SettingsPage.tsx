@@ -50,6 +50,7 @@ export function SettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <PlanCard />
       <PhoneCard />
+      <PasswordCard />
       <div className="card mt-6 space-y-6 p-6">
         {error && <ErrorBanner message={error} />}
         <label className="block">
@@ -92,6 +93,66 @@ export function SettingsPage() {
         <p className="mt-3 text-sm text-muted">Usage is unavailable.</p>
       )}
     </Layout>
+  );
+}
+
+function PasswordCard() {
+  const [open, setOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setMsg("");
+    try {
+      await api.changePassword(oldPassword, newPassword);
+      setOldPassword("");
+      setNewPassword("");
+      setOpen(false);
+      setMsg("Password changed.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not change the password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card mt-6 space-y-4 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="eyebrow">Password</p>
+          {msg && <p className="mt-1 text-sm text-accent">{msg}</p>}
+        </div>
+        {!open && (
+          <button className="btn-secondary" onClick={() => { setOpen(true); setMsg(""); }}>
+            Change password
+          </button>
+        )}
+      </div>
+      {open && (
+        <form onSubmit={(e) => void submit(e)} className="space-y-3">
+          {error && <ErrorBanner message={error} />}
+          <label className="block">
+            <span className="label">Current password</span>
+            <input className="field" type="password" autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required />
+          </label>
+          <label className="block">
+            <span className="label">New password (8+ characters)</span>
+            <input className="field" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+          </label>
+          <div className="flex gap-3">
+            <button className="btn-primary" disabled={busy}>Save password</button>
+            <button type="button" className="btn-secondary" onClick={() => { setOpen(false); setError(""); }}>Cancel</button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

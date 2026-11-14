@@ -14,15 +14,21 @@ Unauthenticated requests get `403`. Throttled requests get `429`.
 | GET | `/health/` | `{"status":"ok","database":true,"livekit_configured":true,"translation_enabled":true}`; `503` if the DB is down |
 | GET | `/languages/` | Supported languages (`ta-IN`, `hi-IN`, `en-IN`), voices, `translation_enabled` |
 | GET | `/auth/csrf/` | Sets the `csrftoken` cookie |
-| POST | `/auth/register/` | `{username, password, display_name?}` → user; logs in. Throttle: `auth` 20/hour. Django password validators apply |
-| POST | `/auth/login/` | `{username, password}` → user. Throttle: `auth` |
+| POST | `/auth/register/` | `{username, password, display_name?, want_token?}` → user; logs in. Throttle: `auth` 20/hour. Django password validators apply. With `want_token: true` (mobile app) the reply also has `token`, used as `Authorization: Token <token>` |
+| POST | `/auth/login/` | `{username, password, want_token?}` → user (plus `token` when asked). Throttle: `auth` |
+| POST | `/auth/password/reset/request/` | `{phone}` → `{sent_to, expires_in, resend_in}`. Sends an SMS code only if the number is linked to an account; the reply is the same either way. Throttle: `otp` |
+| POST | `/auth/password/reset/confirm/` | `{phone, code, new_password}` → `204`. Signs the user out of the mobile app; web sessions end because the password hash changes |
+| POST | `/auth/otp/request/`, `/auth/otp/verify/` | SMS-code sign-in (creates an account on first use, returns a token). Kept for later; the apps use username/password |
 
 ## Authenticated
 
 | Method | Path | Description |
 |---|---|---|
 | POST | `/auth/logout/` | `204` |
-| GET | `/auth/me/` | `{id, username, preferences}` |
+| GET | `/auth/me/` | `{id, username, phone_number, is_staff, preferences}` |
+| POST | `/auth/password/change/` | `{old_password, new_password}` → `204`; `400` for a wrong current password or a weak new one. This device stays signed in |
+| POST | `/auth/phone/request/` | `{phone}` → sends an SMS code to add that number. `409 phone_taken` if another account has it |
+| POST / DELETE | `/auth/phone/verify/` | POST `{phone, code}` → user with the verified `phone_number` (replaces any previous number); DELETE removes the number |
 | GET / PUT | `/preferences/` | `{display_name, spoken_language, listen_language, voice, show_subtitles, original_voice_volume (0-100)}`; PUT is partial; languages/voices validated |
 | GET | `/rooms/` | Your 20 most recent calls (member view) |
 | POST | `/rooms/` | `{spoken_language, listen_language, voice?}` → creates a call, you are host. `429 daily_call_limit` if today's call-time budget is used. `translation_enabled` is false if AI is disabled or today's AI budget is used. Throttle: `room_create` (default 10/hour) |

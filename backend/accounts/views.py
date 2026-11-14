@@ -2,7 +2,7 @@ import hmac
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout, update_session_auth_hash
 from django.db import transaction
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -17,11 +17,14 @@ from rest_framework.views import APIView
 from . import phone as phone_utils
 from .models import OTPChallenge, PhoneNumber, get_preference
 from .serializers import (
+    ChangePasswordSerializer,
     LoginSerializer,
     OTPRequestSerializer,
     OTPVerifySerializer,
+    PasswordResetSerializer,
     PreferenceSerializer,
     RegisterSerializer,
+    check_new_password,
     user_payload,
 )
 
@@ -87,6 +90,9 @@ class OTPRequestView(APIView):
         """Hook: return a Response to refuse sending a code to this number."""
         return None
 
+    def deliver(self, phone, code):
+        phone_utils.send_sms(phone, f"{code} is your AI Call Translator login code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes.")
+
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp"
@@ -115,7 +121,7 @@ class OTPRequestView(APIView):
             OTPChallenge.objects.create(
                 phone=phone, code_hash=phone_utils.hash_code(phone, code), expires_at=phone_utils.otp_expiry()
             )
-        phone_utils.send_sms(phone, f"{code} is your AI Call Translator login code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes.")
+        self.deliver(phone, code)
         return Response(
             {"sent_to": phone_utils.mask_phone(phone), "expires_in": settings.OTP_TTL_SECONDS, "resend_in": settings.OTP_RESEND_SECONDS}
         )
@@ -226,6 +232,91 @@ class PhoneLinkVerifyView(APIView):
     def delete(self, request):
         PhoneNumber.objects.filter(user=request.user).delete()
         return Response(user_payload(request.user))
+
+
+def _consume_code(phone: str, code: str):
+    """Checks and burns a code. Returns an error Response, or None when the code was right.
+    Call inside transaction.atomic() so the row lock holds."""
+    challenge = (
+        OTPChallenge.objects.select_for_update().filter(phone=phone, consumed=False, expires_at__gt=timezone.now()).first()
+    )
+    if challenge is None:
+        return Response({"detail": "Incorrect or expired code.", "code": "otp_invalid"}, status=400)
+    if challenge.attempts >= settings.OTP_MAX_ATTEMPTS:
+        challenge.consumed = True
+        challenge.save(update_fields=["consumed"])
+        return Response({"detail": "Too many wrong attempts. Request a new code.", "code": "otp_locked"}, status=400)
+    if not hmac.compare_digest(phone_utils.hash_code(phone, code), challenge.code_hash):
+        challenge.attempts += 1
+        challenge.save(update_fields=["attempts"])
+        return Response({"detail": "Incorrect or expired code.", "code": "otp_invalid"}, status=400)
+    challenge.consumed = True
+    challenge.save(update_fields=["consumed"])
+    return None
+
+
+class ChangePasswordView(APIView):
+    """Signed-in user changes their password. This device stays signed in; other web sessions are signed out by Django."""
+
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    def post(self, request):
+        data = ChangePasswordSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        user = request.user
+        if not user.check_password(data.validated_data["old_password"]):
+            return Response({"old_password": ["Current password is incorrect."]}, status=400)
+        try:
+            check_new_password(data.validated_data["new_password"], user)
+        except Exception as exc:
+            return Response({"new_password": exc.detail}, status=400)
+        user.set_password(data.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        update_session_auth_hash(request, user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordResetRequestView(OTPRequestView):
+    """Forgot password: sends a code to the verified number of an account.
+    The reply is identical whether or not the number belongs to an account."""
+
+    def deliver(self, phone, code):
+        if PhoneNumber.objects.filter(number=phone).exists():
+            phone_utils.send_sms(
+                phone, f"{code} is your AI Call Translator password reset code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes."
+            )
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    def post(self, request):
+        data = PasswordResetSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            phone = phone_utils.normalize_phone(data.validated_data["phone"])
+        except phone_utils.InvalidPhone as exc:
+            return Response({"phone": [str(exc)]}, status=400)
+        record = PhoneNumber.objects.select_related("user").filter(number=phone).first()
+        if record is not None:
+            try:
+                check_new_password(data.validated_data["new_password"], record.user)
+            except Exception as exc:
+                return Response({"new_password": exc.detail}, status=400)
+        with transaction.atomic():
+            error = _consume_code(phone, data.validated_data["code"])
+            if error is not None:
+                return error
+            if record is None:  # a code can exist for a number with no account; never reveal that
+                return Response({"detail": "Incorrect or expired code.", "code": "otp_invalid"}, status=400)
+            user = record.user
+            user.set_password(data.validated_data["new_password"])
+            user.save(update_fields=["password"])
+            Token.objects.filter(user=user).delete()  # sign out every device
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeView(APIView):

@@ -285,6 +285,11 @@ class FakeSummarizer:
         return self.notes
 
 
+class PaidFakeSummarizer(FakeSummarizer):
+    name, model = "anthropic", "claude-test"
+    input_tokens, output_tokens = 1000, 250
+
+
 def make_transcribed_meeting(owner_client) -> Meeting:
     meeting_id = upload(owner_client).json()["id"]
     client = sarvam_mock([], transcripts=("Ravi will send the report by Friday", "We decided to hire two engineers"))
@@ -363,9 +368,14 @@ def test_anthropic_provider_request_shape_and_validation(settings):
                 type = "text"
                 text = json.dumps({"summary": "ok", "key_points": [], "decisions": [], "action_items": [], "open_questions": []})
 
+            class Usage:
+                input_tokens = 1200
+                output_tokens = 300
+
             class Resp:
                 stop_reason = "end_turn"
                 content = [Block()]
+                usage = Usage()
 
             return Resp()
 
@@ -378,6 +388,7 @@ def test_anthropic_provider_request_shape_and_validation(settings):
     provider = AnthropicSummaryProvider(client=FakeClient())
     notes = provider.summarize("T", [TranscriptLine(0, 0, "", "hello", "")], "ta")
     assert notes.summary == "ok"
+    assert (provider.input_tokens, provider.output_tokens) == (1200, 300)
     assert captured["model"] == settings.SUMMARY_MODEL
     assert captured["output_config"]["format"]["type"] == "json_schema"
     assert captured["fallbacks"] == "default" and "server-side-fallback-2026-07-01" in captured["betas"]
@@ -636,3 +647,15 @@ def test_call_recording_needs_secret_consent_and_setting(settings):
     assert post_recording(room, now, wav_file(1)).json() == {"stored": 0}
     settings.CALL_RECORDING_ENABLED = True
     assert post_recording(room, now, b"not audio" * 100).status_code == 400
+
+
+@pytest.mark.django_db
+def test_summary_tokens_add_up_across_regenerations():
+    from meetings.services import summarize_meeting
+
+    meeting = make_transcribed_meeting(client_for("anand"))
+    notes = MeetingNotes(summary="ok", key_points=[], decisions=[], action_items=[], open_questions=[])
+    summarize_meeting(meeting, summarizer=PaidFakeSummarizer(notes))
+    summarize_meeting(Meeting.objects.get(pk=meeting.pk), summarizer=PaidFakeSummarizer(notes))
+    meeting.refresh_from_db()
+    assert (meeting.summary_input_tokens, meeting.summary_output_tokens) == (2000, 500)

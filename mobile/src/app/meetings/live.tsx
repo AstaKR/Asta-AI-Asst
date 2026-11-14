@@ -70,6 +70,8 @@ export default function LiveMeetingScreen() {
   }, [code, meetingId]);
 
   useEffect(() => {
+    // Connecting on mount is the intended effect; connect() sets state as it progresses.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void connect();
   }, [connect]);
 
