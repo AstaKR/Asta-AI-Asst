@@ -2,9 +2,10 @@ import { requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder }
 import { File } from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, Text, View, type ScrollViewInstance } from "react-native";
+import { Pressable, ScrollView, Text, View, type ScrollViewInstance } from "react-native";
 
 import { ApiError, meetingsApi } from "../../api";
+import { FadeIn, LevelOrb, SEAT_COLORS, Seats, type Seat } from "../../components/MeetingViz";
 import { Banner, Button, Card, Chip, Muted, Screen, colors } from "../../components/ui";
 import { formatClock } from "../../lib/meetings";
 import { SPEECH_RECORDING } from "../../lib/recording";
@@ -12,7 +13,7 @@ import type { MeetingDetail, TranscriptSegment } from "../../types";
 
 const CHUNK_SECONDS = 40; // every chunk is a complete file the server can transcribe on its own
 const NOTES_EVERY_SECONDS = 90;
-const SPEAKER_COLORS = [colors.brand, colors.accent, colors.warn, colors.danger, colors.muted];
+type NotesTab = "summary" | "decisions" | "actions" | "questions";
 
 /**
  * In-person group meeting: the phone sits on the table and records. Every ~40 s a chunk is sent for transcription
@@ -21,7 +22,7 @@ const SPEAKER_COLORS = [colors.brand, colors.accent, colors.warn, colors.danger,
  */
 export default function LiveMeetingScreen() {
   const { meetingId } = useLocalSearchParams<{ meetingId: string }>();
-  const recorder = useAudioRecorder(SPEECH_RECORDING);
+  const recorder = useAudioRecorder({ ...SPEECH_RECORDING, isMeteringEnabled: true });
   const [elapsed, setElapsed] = useState(0);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [notes, setNotes] = useState<MeetingDetail | null>(null);
@@ -33,10 +34,19 @@ export default function LiveMeetingScreen() {
   const rotating = useRef(false);
   const segCount = useRef(0);
   const scroller = useRef<ScrollViewInstance | null>(null);
-  const colorFor = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of segments) if (!m.has(s.speaker || "?")) m.set(s.speaker || "?", SPEAKER_COLORS[m.size % SPEAKER_COLORS.length]);
-    return m;
+  const [levelDb, setLevelDb] = useState(-60);
+  const [tab, setTab] = useState<NotesTab>("summary");
+  // Who is at the table: in order of first appearance, with word counts; the last speaker is highlighted.
+  const seats: Seat[] = useMemo(() => {
+    const order: string[] = [];
+    const words = new Map<string, number>();
+    for (const s of segments) {
+      const name = s.speaker || "Speaker";
+      if (!words.has(name)) order.push(name);
+      words.set(name, (words.get(name) ?? 0) + s.original_text.split(/\s+/).filter(Boolean).length);
+    }
+    const last = segments.length ? segments[segments.length - 1].speaker || "Speaker" : "";
+    return order.map((name, i) => ({ name, color: SEAT_COLORS[i % SEAT_COLORS.length], words: words.get(name) ?? 0, active: name === last }));
   }, [segments]);
 
   const upload = useCallback(
@@ -105,6 +115,19 @@ export default function LiveMeetingScreen() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Drives the orb: the microphone level, about ten times a second.
+  useEffect(() => {
+    if (phase !== "live") return;
+    const id = setInterval(() => {
+      try {
+        setLevelDb(recorder.getStatus().metering ?? -60);
+      } catch {
+        /* between chunks the recorder is briefly not ready */
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [phase, recorder]);
+
   useEffect(() => {
     if (phase !== "live") return;
     const id = setInterval(() => void rotate(true), CHUNK_SECONDS * 1000);
@@ -144,43 +167,76 @@ export default function LiveMeetingScreen() {
   }
 
   const summary = notes?.summary;
+  const colorOf = (speaker: string) => seats.find((x) => x.name === (speaker || "Speaker"))?.color ?? SEAT_COLORS[0];
+  const tabs: { key: NotesTab; label: string; count?: number }[] = [
+    { key: "summary", label: "Summary" },
+    { key: "decisions", label: "Decisions", count: summary?.decisions.length },
+    { key: "actions", label: "Actions", count: notes?.action_items.length },
+    { key: "questions", label: "Open", count: summary?.open_questions.length },
+  ];
 
   return (
     <Screen>
       {error ? <Banner tone="danger">{error}</Banner> : null}
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <Chip label={phase === "live" ? "Recording" : phase === "saving" ? "Saving…" : "Starting…"} tone={phase === "live" ? "danger" : "muted"} />
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 4, flexWrap: "wrap", justifyContent: "center" }}>
+        <Chip label={phase === "live" ? "REC" : phase === "saving" ? "Saving…" : "Starting…"} tone={phase === "live" ? "danger" : "muted"} />
         <Chip label={formatClock(elapsed * 1000)} />
         {pending > 0 ? <Chip label="Transcribing…" tone="brand" /> : null}
       </View>
-      <ScrollView ref={scroller} onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })} contentContainerStyle={{ paddingBottom: 16, gap: 10 }}>
+      <ScrollView ref={scroller} onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })} contentContainerStyle={{ paddingBottom: 16, gap: 12 }}>
+        <View style={{ alignItems: "center", gap: 6 }}>
+          <LevelOrb levelDb={levelDb} active={phase === "live"} />
+          <Seats seats={seats} />
+          {seats.length === 0 ? <Muted style={{ textAlign: "center" }}>Put the phone in the middle of the table and talk.{"\n"}Speakers take their seats about {CHUNK_SECONDS} seconds after they speak.</Muted> : null}
+        </View>
         <Card>
-          <Muted style={{ marginBottom: 6 }}>Transcript</Muted>
-          {segments.length === 0 ? <Muted>Put the phone in the middle of the table and talk. Lines appear about {CHUNK_SECONDS} seconds after you speak.</Muted> : null}
+          <Muted style={{ marginBottom: 8 }}>Conversation</Muted>
+          {segments.length === 0 ? <Muted>Lines appear here as people talk.</Muted> : null}
           {segments.map((s) => (
-            <Text key={s.index} style={{ color: colors.ink, fontSize: 15, lineHeight: 22, marginBottom: 6 }}>
-              <Text style={{ color: colorFor.get(s.speaker || "?"), fontWeight: "700" }}>{s.speaker || "Speaker"}  </Text>
-              {s.original_text}
-            </Text>
+            <FadeIn key={s.index}>
+              <View style={{ borderLeftWidth: 3, borderLeftColor: colorOf(s.speaker), paddingLeft: 10, marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: colorOf(s.speaker), fontWeight: "800", fontSize: 11, textTransform: "uppercase" }}>{s.speaker || "Speaker"}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 10 }}>{formatClock(s.start_ms)}</Text>
+                </View>
+                <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 22 }}>{s.original_text}</Text>
+              </View>
+            </FadeIn>
           ))}
         </Card>
         <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
             <Muted>Live notes</Muted>
             <Text onPress={() => void refreshNotes()} style={{ color: colors.brand, fontSize: 13 }} accessibilityRole="button">
               Refresh now
             </Text>
           </View>
-          {!summary ? <Muted style={{ marginTop: 6 }}>Notes appear after the first minute or two of talking.</Muted> : null}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+            {tabs.map((t) => (
+              <Pressable
+                key={t.key}
+                onPress={() => setTab(t.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === t.key }}
+                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: tab === t.key ? colors.brandSoft : colors.subtle, borderWidth: 1, borderColor: tab === t.key ? colors.brand : colors.line }}
+              >
+                <Text style={{ color: tab === t.key ? colors.ink : colors.muted, fontWeight: "700", fontSize: 12 }}>
+                  {t.label}
+                  {t.count ? `  ${t.count}` : ""}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          {!summary ? <Muted>Notes appear after the first minute or two of talking.</Muted> : null}
           {summary ? (
-            <View style={{ marginTop: 8, gap: 8 }}>
-              <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 21 }}>{summary.summary}</Text>
-              {summary.decisions.length > 0 ? <NoteList title="Decisions" items={summary.decisions.map((d) => d.text)} /> : null}
-              {notes && notes.action_items.length > 0 ? (
-                <NoteList title="Action items" items={notes.action_items.map((a) => (a.owner_name ? `${a.text} — ${a.owner_name}` : a.text))} />
+            <FadeIn key={tab}>
+              {tab === "summary" ? <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 22 }}>{summary.summary}</Text> : null}
+              {tab === "decisions" ? <NoteList items={summary.decisions.map((d) => d.text)} empty="No decisions yet." /> : null}
+              {tab === "actions" ? (
+                <NoteList items={(notes?.action_items ?? []).map((a) => [a.text, a.owner_name, a.deadline].filter(Boolean).join(" — "))} empty="No action items yet." />
               ) : null}
-              {summary.open_questions.length > 0 ? <NoteList title="Open questions" items={summary.open_questions.map((q) => q.text)} /> : null}
-            </View>
+              {tab === "questions" ? <NoteList items={summary.open_questions.map((q) => q.text)} empty="No open questions." /> : null}
+            </FadeIn>
           ) : null}
         </Card>
       </ScrollView>
@@ -189,13 +245,13 @@ export default function LiveMeetingScreen() {
   );
 }
 
-function NoteList({ title, items }: { title: string; items: string[] }) {
+function NoteList({ items, empty }: { items: string[]; empty: string }) {
+  if (!items.length) return <Muted>{empty}</Muted>;
   return (
-    <View>
-      <Muted style={{ fontSize: 12, textTransform: "uppercase" }}>{title}</Muted>
+    <View style={{ gap: 6 }}>
       {items.map((t, i) => (
-        <Text key={i} style={{ color: colors.ink, fontSize: 14, lineHeight: 20, marginTop: 3 }}>
-          • {t}
+        <Text key={i} style={{ color: colors.ink, fontSize: 14, lineHeight: 20 }}>
+          •  {t}
         </Text>
       ))}
     </View>

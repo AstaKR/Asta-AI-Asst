@@ -43,6 +43,7 @@
   --animate-blink: blink 1s steps(2, start) infinite;
   --animate-drift: drift 22s ease-in-out infinite alternate;
   --animate-scan: scan 7s linear infinite;
+  --animate-seat-ring: seat-ring 1.7s ease-out infinite;
   --animate-pop: pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 
   @keyframes float {
@@ -64,6 +65,10 @@
   @keyframes pulse-ring {
     0% { box-shadow: 0 0 0 0 rgb(138 123 255 / 0.55); }
     100% { box-shadow: 0 0 0 22px rgb(138 123 255 / 0); }
+  }
+  @keyframes seat-ring {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); }
+    100% { box-shadow: 0 0 0 20px color-mix(in srgb, currentColor 0%, transparent); }
   }
   @keyframes wave {
     0%, 100% { transform: scaleY(0.25); }
