@@ -258,6 +258,7 @@ MEETING_STT_ENGINE = env("MEETING_STT_ENGINE", "sarvam")
 MEETING_STT_MODEL = env("MEETING_STT_MODEL", "saaras:v4")
 MEETING_STT_MODE = env("MEETING_STT_MODE", "codemix")  # codemix handles Tamil/Hindi mixed with English
 MEETING_TRANSLATE_MODEL = env("MEETING_TRANSLATE_MODEL", "mayura:v1")
+TRANSLATE_MODE = env("SARVAM_TRANSLATE_MODE", "modern-colloquial")  # formal | modern-colloquial | classic-colloquial | code-mixed
 SARVAM_API_KEY = env("SARVAM_API_KEY", "").strip()
 # Which engine each AI job uses (only sarvam for now). Meetings keep MEETING_STT_ENGINE.
 AI_ENGINE = env("AI_ENGINE", "sarvam")

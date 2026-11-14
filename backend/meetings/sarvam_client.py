@@ -108,6 +108,9 @@ class SarvamClient:
                 "source_language_code": source,
                 "target_language_code": target,
                 "model": settings.MEETING_TRANSLATE_MODEL,
+                # Everyday speech, not formal written text; keep digits as digits.
+                "mode": settings.TRANSLATE_MODE,
+                "numerals_format": "international",
             },
         )
         return (body.get("translated_text") or "").strip()

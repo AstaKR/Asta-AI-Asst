@@ -1,5 +1,4 @@
 import {
-  RecordingPresets,
   createAudioPlayer,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -10,6 +9,7 @@ import { File, Paths } from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, quickApi, quickSpeakApi } from "../api";
+import { SPEECH_RECORDING, TAIL_MS } from "../lib/recording";
 import type { QuickResult } from "../types";
 
 const MIN_MS = 400;
@@ -19,8 +19,7 @@ const MIN_MS = 400;
  * (Sarvam speech-to-text → translate → speech) and play the translated voice.
  */
 export function useQuickTranslate(maxSeconds = 30) {
-  // Mono 64 kbps AAC keeps a 30 s clip well under the 2 MB upload limit.
-  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, numberOfChannels: 1, bitRate: 64000 });
+  const recorder = useAudioRecorder(SPEECH_RECORDING);
   const [recording, setRecording] = useState<string | null>(null); // key of the side that is recording
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -85,6 +84,7 @@ export function useQuickTranslate(maxSeconds = 30) {
       if (!key) return null;
       active.current = null;
       if (timer.current) clearTimeout(timer.current);
+      await new Promise((r) => setTimeout(r, TAIL_MS));
       await recorder.stop();
       setRecording(null);
       const uri = recorder.uri;

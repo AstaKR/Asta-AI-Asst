@@ -182,3 +182,34 @@ def split_on_pauses(
         if (end - start) * 30 >= min_speech_ms:
             out.append((start * frame, min(end * frame, samples.size)))
     return out
+
+
+def enhance_speech(pcm: bytes, rate: int = STT_RATE) -> bytes:
+    """Cleans a short phone recording before speech-to-text: removes rumble below ~90 Hz (handling noise, wind),
+    trims long silence at both ends and lifts quiet speech to a steady level. Mono 16-bit PCM in and out.
+    Never raises: audio it cannot improve is returned unchanged."""
+    samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32)
+    if samples.size < rate // 4:
+        return pcm
+    # High-pass with a smooth ramp between 60 and 100 Hz (FFT is fast enough for a 30 s clip).
+    spectrum = np.fft.rfft(samples - samples.mean())
+    freqs = np.fft.rfftfreq(samples.size, 1 / rate)
+    spectrum *= np.clip((freqs - 60.0) / 40.0, 0.0, 1.0)
+    cleaned = np.fft.irfft(spectrum, samples.size)
+
+    # Trim leading/trailing quiet, keeping 250 ms around the speech so word edges survive.
+    frame = rate // 50  # 20 ms
+    n = cleaned.size // frame
+    if n:
+        rms = np.sqrt(np.mean(cleaned[: n * frame].reshape(n, frame) ** 2, axis=1))
+        loud = np.flatnonzero(rms > max(150.0, float(rms.max()) * 0.06))
+        if loud.size:
+            pad = 250 // 20
+            start, end = max(0, loud[0] - pad), min(n, loud[-1] + 1 + pad)
+            cleaned = cleaned[start * frame : end * frame]
+
+    # Normalise: peak to ~-3 dBFS, boosting at most 12x (about 22 dB) so a silent recording is not turned into hiss.
+    peak = float(np.abs(cleaned).max())
+    if peak > 200.0:
+        cleaned = cleaned * min(23000.0 / peak, 12.0)
+    return np.clip(cleaned, -32768, 32767).astype(np.int16).tobytes()

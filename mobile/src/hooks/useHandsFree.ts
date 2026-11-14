@@ -1,5 +1,4 @@
 import {
-  RecordingPresets,
   createAudioPlayer,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -9,6 +8,7 @@ import { File, Paths } from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, quickApi, quickSpeakApi } from "../api";
+import { SPEECH_RECORDING } from "../lib/recording";
 import { createTurnDetector } from "../lib/vad";
 import type { QuickResult } from "../types";
 
@@ -21,7 +21,7 @@ const IDLE_RESTART_MS = 20000;
  * other), plays the translation, then listens again. It does not listen while the translation plays.
  */
 export function useHandsFree(onResult: (r: QuickResult) => void) {
-  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, numberOfChannels: 1, bitRate: 64000, isMeteringEnabled: true });
+  const recorder = useAudioRecorder({ ...SPEECH_RECORDING, isMeteringEnabled: true });
   const [listening, setListening] = useState(false);
   const [hearing, setHearing] = useState(false);
   const [busy, setBusy] = useState(false);

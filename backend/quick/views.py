@@ -190,7 +190,7 @@ class QuickSpeechView(_QuickView):
                 info = audio_lib.probe(tmp)
                 if info.duration_seconds > settings.QUICK_MAX_SPEECH_SECONDS + 0.5:
                     return Response({"detail": f"Speak for at most {settings.QUICK_MAX_SPEECH_SECONDS} seconds at a time."}, status=400)
-                wav = audio_lib.wav_bytes(audio_lib.decode_pcm16(tmp))
+                wav = audio_lib.wav_bytes(audio_lib.enhance_speech(audio_lib.decode_pcm16(tmp)))
             except audio_lib.InvalidAudio as exc:
                 return Response({"detail": str(exc)}, status=400)
         finally:

@@ -658,3 +658,28 @@ def test_summary_tokens_add_up_across_regenerations():
     summarize_meeting(Meeting.objects.get(pk=meeting.pk), summarizer=PaidFakeSummarizer(notes))
     meeting.refresh_from_db()
     assert (meeting.summary_input_tokens, meeting.summary_output_tokens) == (2000, 500)
+
+
+def test_enhance_speech_trims_silence_removes_rumble_and_lifts_level():
+    import numpy as np
+
+    from meetings import audio as audio_lib
+
+    rate = audio_lib.STT_RATE
+    t = np.arange(rate) / rate
+    speech = 0.02 * np.sin(2 * np.pi * 440 * t)  # quiet 1 s tone
+    rumble = 0.05 * np.sin(2 * np.pi * 30 * np.arange(rate * 7) / rate)
+    quiet = np.zeros(rate * 3)
+    clip = np.concatenate([quiet, speech, quiet]) + rumble
+    pcm = (clip * 32768).astype(np.int16).tobytes()
+
+    out = np.frombuffer(audio_lib.enhance_speech(pcm), dtype=np.int16)
+    assert 1.4 * rate < out.size < 2.0 * rate  # ~1 s of speech plus padding, silence trimmed
+    assert np.abs(out).max() > np.abs(np.frombuffer(pcm, dtype=np.int16)).max() * 0.6  # not shrunk
+
+
+def test_enhance_speech_returns_tiny_input_unchanged():
+    from meetings import audio as audio_lib
+
+    pcm = b"\x01\x00" * 100
+    assert audio_lib.enhance_speech(pcm) == pcm
