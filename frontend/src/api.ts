@@ -4,6 +4,7 @@ import type {
   KeysPayload,
   MeetingActionItem,
   MeetingConfig,
+  MeetingAnswer,
   MeetingDetail,
   MeetingListItem,
   MyPlan,
@@ -225,9 +226,11 @@ export const meetingsApi = {
   updateActionItem: (id: string, itemId: number, body: Partial<MeetingActionItem>) =>
     request<MeetingActionItem>(`/meetings/${id}/action-items/${itemId}/`, "PATCH", body),
   startLive: (body: { title: string; spoken_language: string; translation_language: string; voice_playback: boolean; consent: boolean }) =>
-    request<{ meeting: MeetingDetail; room_code: string }>("/meetings/live/", "POST", body),
-  liveStarted: (id: string, recording_started_at_ms: number) =>
-    request<void>(`/meetings/${id}/live-started/`, "POST", { recording_started_at_ms }),
+    request<{ meeting: MeetingDetail }>("/meetings/live/", "POST", body),
+  sendChunk: (id: string, form: FormData) => uploadWithProgress<{ segments: TranscriptSegment[]; duration_seconds: number }>(`/meetings/${id}/chunk/`, form),
+  liveNotes: (id: string) => request<MeetingDetail>(`/meetings/${id}/live-notes/`, "POST"),
+  finishLive: (id: string) => request<MeetingDetail>(`/meetings/${id}/finish/`, "POST"),
+  ask: (question: string) => request<MeetingAnswer>("/meetings/ask/", "POST", { question }),
   callTranscriptConsent: (code: string, save: boolean) =>
     request<{ save_transcript: boolean; my_consent: boolean; waiting_for: string[]; records_audio: boolean }>(
       `/rooms/${encodeURIComponent(code)}/transcript/`,

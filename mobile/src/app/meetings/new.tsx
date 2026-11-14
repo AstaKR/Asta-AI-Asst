@@ -8,17 +8,17 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { ApiError, meetingsApi, type UploadFile } from "../../api";
 import { MeetingSetup, defaultMeetingSetup, type MeetingSetupValue } from "../../components/MeetingSetup";
-import { Banner, Button, Card, Muted, Screen, colors, styles } from "../../components/ui";
+import { Banner, Button, Card, Muted, Screen, colors } from "../../components/ui";
 import { checkUploadFile, formatClock } from "../../lib/meetings";
 import type { MeetingConfig } from "../../types";
 
 type Tab = "live" | "record" | "upload";
 const TABS: { key: Tab; title: string }[] = [
-  { key: "live", title: "Live translate" },
+  { key: "live", title: "Live meeting" },
   { key: "record", title: "Record" },
   { key: "upload", title: "Upload" },
 ];
@@ -61,9 +61,8 @@ export default function NewMeetingScreen() {
   );
 }
 
-function LiveForm({ config }: { config: MeetingConfig }) {
-  const [setup, setSetup] = useState<MeetingSetupValue>(defaultMeetingSetup());
-  const [voice, setVoice] = useState(false);
+function LiveForm(_props: { config: MeetingConfig }) {
+  const [setup, setSetup] = useState<MeetingSetupValue>({ ...defaultMeetingSetup("auto"), translation_language: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -71,10 +70,10 @@ function LiveForm({ config }: { config: MeetingConfig }) {
     setBusy(true);
     setError("");
     try {
-      const res = await meetingsApi.startLive({ ...setup, voice_playback: voice });
-      router.push({ pathname: "/meetings/live", params: { meetingId: res.meeting.id, code: res.room_code } });
+      const res = await meetingsApi.startLive({ title: setup.title, spoken_language: setup.spoken_language, translation_language: "", voice_playback: false, consent: setup.consent });
+      router.push({ pathname: "/meetings/live", params: { meetingId: res.meeting.id } });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not start the live session");
+      setError(err instanceof ApiError ? err.message : "Could not start the meeting");
     } finally {
       setBusy(false);
     }
@@ -83,23 +82,12 @@ function LiveForm({ config }: { config: MeetingConfig }) {
   return (
     <Card>
       <Muted style={{ marginBottom: 12 }}>
-        See a live transcript and translation while you speak. On the phone, the live transcript is saved (not the audio) — use
-        Record if you also need the audio.
+        Group meeting in the room: put the phone in the middle of the table. You get who said what and live notes while you talk, and the
+        audio is saved.
       </Muted>
       {error ? <Banner tone="danger">{error}</Banner> : null}
-      {!config.translation_enabled && <Banner tone="warn">Live AI processing is turned off on the server.</Banner>}
-      <MeetingSetup value={setup} onChange={setSetup} allowAuto={false} />
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
-        <Text style={[styles.label, { flex: 1, marginBottom: 0 }]}>Speak the translation aloud</Text>
-        <Switch value={voice} disabled={!setup.translation_language} onValueChange={setVoice} trackColor={{ true: colors.brand }} />
-      </View>
-      <Button
-        label="Start live session"
-        onPress={() => void start()}
-        busy={busy}
-        disabled={!setup.consent || !setup.title.trim() || !config.translation_enabled}
-        style={{ marginTop: 16 }}
-      />
+      <MeetingSetup value={setup} onChange={setSetup} allowAuto showTranslation={false} />
+      <Button label="Start meeting" onPress={() => void start()} busy={busy} disabled={!setup.consent || !setup.title.trim()} style={{ marginTop: 16 }} />
     </Card>
   );
 }

@@ -115,6 +115,19 @@ def test_key(name: str, value: str) -> tuple[bool, str]:
             with anthropic_errors():
                 anthropic.Anthropic(api_key=value, timeout=20.0).models.list(limit=1)
             return True, "Anthropic accepted the key."
+        if name == "gemini_api_key":
+            import httpx
+
+            resp = httpx.get(
+                "https://generativelanguage.googleapis.com/v1beta/models",
+                params={"pageSize": 1},
+                headers={"x-goog-api-key": value},
+                timeout=20.0,
+            )
+            if resp.status_code in (400, 401, 403):
+                return False, "Google rejected the Gemini key."
+            resp.raise_for_status()
+            return True, "Gemini accepted the key."
         from meetings.sarvam_client import SarvamClient
 
         SarvamClient(api_key=value, min_interval=0).translate("Hello", "en-IN", "hi-IN")

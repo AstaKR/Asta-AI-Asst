@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { ApiError, meetingsApi, type MeetingFilters } from "../api";
 import { ErrorBanner, Layout } from "../components/Layout";
+import { AskMeetings } from "../components/meetings/AskMeetings";
 import { MEETING_LANGUAGES, formatClock, isProcessing, meetingLanguageName } from "../lib/meetings";
 import type { MeetingListItem, Paginated } from "../types";
 
@@ -59,6 +60,7 @@ export function MeetingsPage() {
           New meeting
         </Link>
       </div>
+      <AskMeetings />
       <div className="card mt-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
         <input className="field lg:col-span-2" placeholder="Search titles, transcripts, translations, notes…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search meetings" />
         <select className="field" value={filters.language ?? ""} onChange={(e) => set({ language: e.target.value })} aria-label="Language">

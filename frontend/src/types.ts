@@ -181,6 +181,11 @@ export interface MeetingDetail extends MeetingListItem {
   action_items: MeetingActionItem[];
 }
 
+export interface MeetingAnswer {
+  answer: string;
+  sources: { meeting_id: string; title: string; recorded_at: string; segment: number | null; start_ms: number | null }[];
+}
+
 export interface MeetingConfig {
   languages: { code: MeetingLang; name: string }[];
   engines: Record<string, boolean>;

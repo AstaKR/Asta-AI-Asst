@@ -139,7 +139,7 @@ class MeetingUploadSerializer(_ConsentMixin):
 
 class LiveMeetingSerializer(_ConsentMixin):
     title = serializers.CharField(max_length=200)
-    spoken_language = serializers.ChoiceField(choices=LANG_CHOICES)
+    spoken_language = serializers.ChoiceField(choices=[AUTO, *LANG_CHOICES], default=AUTO)
     translation_language = serializers.ChoiceField(choices=["", *LANG_CHOICES], default="", allow_blank=True)
     voice_playback = serializers.BooleanField(default=False)
 

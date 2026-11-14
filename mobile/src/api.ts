@@ -1,6 +1,7 @@
 import { API_URL } from "./config";
 import type {
   MeetingActionItem,
+  MeetingAnswer,
   MeetingConfig,
   MeetingDetail,
   MeetingListItem,
@@ -187,9 +188,12 @@ export const meetingsApi = {
   updateActionItem: (id: string, itemId: number, body: Partial<MeetingActionItem>) =>
     request<MeetingActionItem>(`/meetings/${id}/action-items/${itemId}/`, "PATCH", body),
   startLive: (body: { title: string; spoken_language: string; translation_language: string; voice_playback: boolean; consent: boolean }) =>
-    request<{ meeting: MeetingDetail; room_code: string }>("/meetings/live/", "POST", body),
-  liveStarted: (id: string, recording_started_at_ms: number) =>
-    request<void>(`/meetings/${id}/live-started/`, "POST", { recording_started_at_ms }),
+    request<{ meeting: MeetingDetail }>("/meetings/live/", "POST", body),
+  sendChunk: (id: string, file: UploadFile) =>
+    uploadWithProgress<{ segments: TranscriptSegment[]; duration_seconds: number }>(`/meetings/${id}/chunk/`, {}, file),
+  liveNotes: (id: string) => request<MeetingDetail>(`/meetings/${id}/live-notes/`, "POST"),
+  finishLive: (id: string) => request<MeetingDetail>(`/meetings/${id}/finish/`, "POST"),
+  ask: (question: string) => request<MeetingAnswer>("/meetings/ask/", "POST", { question }),
   audioUrl: (id: string) => `${API_URL}/api/meetings/${id}/audio/`,
   exportUrl: (id: string, kind: ExportKind) => `${API_URL}/api/meetings/${id}/export/?kind=${kind}`,
 };

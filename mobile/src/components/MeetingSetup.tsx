@@ -16,7 +16,7 @@ export function defaultMeetingSetup(spoken = "ta"): MeetingSetupValue {
 }
 
 export const CONSENT_TEXT =
-  "Everyone recorded agreed to the recording, its storage on our server, and its processing by AI (on our own server, or by Sarvam AI and Anthropic Claude when those services are used). It is kept until I delete it.";
+  "Everyone recorded agreed to the recording, its storage on our server, and its processing by AI (Google Gemini for the transcript, Anthropic Claude for the notes). It is kept until I delete it.";
 
 function Chips({ options, value, onChange }: { options: { code: string; label: string }[]; value: string; onChange: (v: string) => void }) {
   return (
@@ -46,15 +46,29 @@ function Chips({ options, value, onChange }: { options: { code: string; label: s
   );
 }
 
-export function MeetingSetup({ value, onChange, allowAuto = true }: { value: MeetingSetupValue; onChange: (v: MeetingSetupValue) => void; allowAuto?: boolean }) {
+export function MeetingSetup({
+  value,
+  onChange,
+  allowAuto = true,
+  showTranslation = true,
+}: {
+  value: MeetingSetupValue;
+  onChange: (v: MeetingSetupValue) => void;
+  allowAuto?: boolean;
+  showTranslation?: boolean;
+}) {
   const langs = MEETING_LANGUAGES.map((l) => ({ code: l.code, label: l.native }));
   return (
     <View>
       <Field label="Meeting title" value={value.title} onChangeText={(title) => onChange({ ...value, title })} maxLength={200} />
       <Text style={styles.label}>Spoken language</Text>
       <Chips options={allowAuto ? [{ code: "auto", label: "Auto / mixed" }, ...langs] : langs} value={value.spoken_language} onChange={(spoken_language) => onChange({ ...value, spoken_language })} />
-      <Text style={[styles.label, { marginTop: 14 }]}>Translate into</Text>
-      <Chips options={[{ code: "", label: "None" }, ...langs]} value={value.translation_language} onChange={(translation_language) => onChange({ ...value, translation_language })} />
+      {showTranslation ? (
+        <>
+          <Text style={[styles.label, { marginTop: 14 }]}>Translate into</Text>
+          <Chips options={[{ code: "", label: "None" }, ...langs]} value={value.translation_language} onChange={(translation_language) => onChange({ ...value, translation_language })} />
+        </>
+      ) : null}
       <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", marginTop: 16, backgroundColor: colors.subtle, borderRadius: 12, padding: 12 }}>
         <Switch value={value.consent} onValueChange={(consent) => onChange({ ...value, consent })} trackColor={{ true: colors.brand }} accessibilityLabel="Consent" />
         <Text style={{ flex: 1, fontSize: 13, color: colors.ink, lineHeight: 18 }}>{CONSENT_TEXT}</Text>

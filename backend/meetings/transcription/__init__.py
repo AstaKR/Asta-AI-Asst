@@ -5,7 +5,7 @@ from integrations import secrets
 from ..errors import ProviderNotConfigured
 from .base import Segment, Transcriber
 
-ENGINES = ("sarvam",)
+ENGINES = ("gemini", "sarvam")
 
 
 def get_transcriber(engine: str | None = None) -> Transcriber:
@@ -14,11 +14,15 @@ def get_transcriber(engine: str | None = None) -> Transcriber:
         from .sarvam import SarvamTranscriber
 
         return SarvamTranscriber()
+    if engine == "gemini":
+        from .gemini import GeminiTranscriber
+
+        return GeminiTranscriber()
     raise ProviderNotConfigured(f"Unknown transcription engine {engine!r}")
 
 
 def available_engines() -> dict[str, bool]:
-    return {"sarvam": bool(secrets.get("sarvam_api_key"))}
+    return {"gemini": bool(secrets.get("gemini_api_key")), "sarvam": bool(secrets.get("sarvam_api_key"))}
 
 
 __all__ = ["ENGINES", "Segment", "Transcriber", "available_engines", "get_transcriber"]

@@ -254,7 +254,9 @@ MEDIA_URL = "/media-private/"  # not routed: files are served by the authenticat
 MEETING_MAX_UPLOAD_MB = env_int("MEETING_MAX_UPLOAD_MB", 200)
 MEETING_MAX_DURATION_SECONDS = env_int("MEETING_MAX_DURATION_SECONDS", 2 * 60 * 60)
 # Transcription engine: sarvam (cloud, paid per audio second)
-MEETING_STT_ENGINE = env("MEETING_STT_ENGINE", "sarvam")
+MEETING_STT_ENGINE = env("MEETING_STT_ENGINE", "gemini")  # meetings: gemini (speaker labels) or sarvam
+GEMINI_API_KEY = env("GEMINI_API_KEY", "").strip()
+MEETING_GEMINI_MODEL = env("MEETING_GEMINI_MODEL", "gemini-2.5-flash")
 MEETING_STT_MODEL = env("MEETING_STT_MODEL", "saaras:v4")
 MEETING_STT_MODE = env("MEETING_STT_MODE", "codemix")  # codemix handles Tamil/Hindi mixed with English
 MEETING_TRANSLATE_MODEL = env("MEETING_TRANSLATE_MODEL", "mayura:v1")

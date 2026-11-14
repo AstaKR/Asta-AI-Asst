@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -25,7 +26,7 @@ from calls.models import CallParticipant, CallRoom
 from calls.views import WorkerSecretPermission
 
 from . import audio as audio_lib
-from . import exports, services
+from . import exports, live, recall, services
 from .errors import ProviderNotConfigured
 from .languages import MEETING_LANGUAGES, to_bcp47
 from .models import ActionItem, Meeting, MeetingJob, TranscriptSegment
@@ -377,7 +378,8 @@ class MeetingExportView(APIView):
 
 
 class LiveMeetingCreateView(APIView):
-    """One-person live session: LiveKit room in 'meeting' mode; the worker transcribes (and translates)."""
+    """Starts an in-person live session: the device records the room and sends short chunks (see LiveChunkView).
+    No video-call service is involved; speaker labels come from the transcription engine."""
 
     def post(self, request):
         data = LiveMeetingSerializer(data=request.data)
@@ -387,60 +389,116 @@ class LiveMeetingCreateView(APIView):
         except plan_limits.PlanLimit as exc:
             return Response({"detail": str(exc), "code": exc.code}, status=429)
         v = data.validated_data
-        pref = get_preference(request.user)
+        engine = settings.MEETING_STT_ENGINE
+        if not available_engines().get(engine):
+            return Response({"detail": f"The '{engine}' transcription engine is not available on this server.", "code": "engine_unavailable"}, status=503)
         now = timezone.now()
-        listen = v["translation_language"] or v["spoken_language"]
-        with transaction.atomic():
-            room = CallRoom.objects.create(
-                created_by=request.user,
-                mode=CallRoom.Mode.MEETING,
-                save_transcript=True,
-                translation_enabled=settings.TRANSLATION_ENABLED,
-                max_duration_seconds=settings.MAX_CALL_DURATION_SECONDS,
-                invite_expires_at=now + timedelta(hours=1),
-            )
-            CallParticipant.objects.create(
-                room=room,
-                user=request.user,
-                identity=f"user-{request.user.id}",
-                display_name=pref.display_name or request.user.username,
-                role=CallParticipant.Role.HOST,
-                spoken_language=to_bcp47(v["spoken_language"]),
-                listen_language=to_bcp47(listen),
-                voice=pref.voice or settings.DEFAULT_VOICE,
-                voice_playback=v["voice_playback"],
-                transcript_consent=True,
-            )
-            meeting = Meeting.objects.create(
-                owner=request.user,
-                title=v["title"],
-                source=Meeting.Source.LIVE,
-                call_room=room,
-                spoken_language=v["spoken_language"],
-                translation_language=v["translation_language"],
-                status=Meeting.Status.LIVE,
-                consent_confirmed_at=now,
-                recorded_at=now,
-                transcription_engine="live",
-            )
-        return Response({"meeting": _detail(meeting), "room_code": room.code}, status=201)
+        meeting = Meeting.objects.create(
+            owner=request.user,
+            title=v["title"],
+            source=Meeting.Source.LIVE,
+            spoken_language=v["spoken_language"],
+            translation_language=v["translation_language"],
+            status=Meeting.Status.LIVE,
+            consent_confirmed_at=now,
+            recorded_at=now,
+            live_started_at=now,
+            transcription_engine=engine,
+        )
+        return Response({"meeting": _detail(meeting)}, status=201)
 
 
-class LiveMeetingStartedView(APIView):
-    """The browser reports when its recording started, so live segment timestamps match the audio."""
+def _live_meeting(request, pk) -> Meeting:
+    meeting = _own(request, pk)
+    if meeting.source != Meeting.Source.LIVE or meeting.status != Meeting.Status.LIVE:
+        raise Conflict("This live session is not running.")
+    return meeting
+
+
+class Conflict(APIException):
+    status_code = 409
+    default_detail = "Conflict."
+
+
+class LiveChunkView(APIView):
+    """A few seconds to ~2 minutes of audio from a running live session. Returns the new transcript lines."""
+
+    parser_classes = [MultiPartParser, FormParser]
+    MAX_KB = 6144
+    MAX_SECONDS = 150
 
     def post(self, request, pk):
-        meeting = _own(request, pk)
+        meeting = _live_meeting(request, pk)
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response({"file": ["No file was uploaded."]}, status=400)
+        if upload.size > self.MAX_KB * 1024:
+            return Response({"file": ["That audio chunk is too large."]}, status=400)
+        ext = Path(upload.name or "").suffix.lower()
+        if ext not in audio_lib.ALLOWED_EXTENSIONS:
+            return Response({"file": ["Unsupported audio format."]}, status=400)
+        fd, tmp = tempfile.mkstemp(suffix=ext)
         try:
-            epoch_ms = int(request.data.get("recording_started_at_ms"))
-        except (TypeError, ValueError):
-            return Response({"recording_started_at_ms": ["Required: milliseconds since epoch."]}, status=400)
-        started = services.epoch_ms_to_datetime(epoch_ms)
-        if abs((started - timezone.now()).total_seconds()) > 3600:
-            return Response({"recording_started_at_ms": ["Timestamp is not plausible."]}, status=400)
-        meeting.live_started_at = started
-        meeting.save(update_fields=["live_started_at", "updated_at"])
-        return Response(status=204)
+            with os.fdopen(fd, "wb") as f:
+                for chunk in upload.chunks():
+                    f.write(chunk)
+            try:
+                info = audio_lib.probe(tmp)
+                if info.duration_seconds > self.MAX_SECONDS:
+                    return Response({"file": [f"Send chunks of at most {self.MAX_SECONDS} seconds."]}, status=400)
+                pcm = audio_lib.decode_pcm16(tmp)
+            except audio_lib.InvalidAudio as exc:
+                return Response({"file": [str(exc)]}, status=400)
+        finally:
+            os.unlink(tmp)
+        try:
+            created = live.add_chunk(meeting, pcm)
+        except services.ProviderError as exc:
+            log.warning("live chunk failed: %s", exc)
+            return Response({"detail": str(exc), "code": "provider"}, status=502)
+        meeting.refresh_from_db()
+        return Response({"segments": SegmentSerializer(created, many=True).data, "duration_seconds": meeting.duration_seconds})
+
+
+class LiveNotesView(APIView):
+    """Refreshes the notes from what has been said so far (summary, decisions, action items, open questions)."""
+
+    def post(self, request, pk):
+        meeting = _live_meeting(request, pk)
+        if not summaries_enabled():
+            return Response({"detail": "AI notes are not configured on this server.", "code": "summaries_disabled"}, status=503)
+        if not meeting.segments.exists():
+            return Response({"detail": "Nothing has been said yet."}, status=400)
+        try:
+            services.summarize_meeting(meeting)
+        except (services.ProviderError, services.BudgetExceeded) as exc:
+            return Response({"detail": str(exc), "code": "provider"}, status=502)
+        return Response(_detail(meeting))
+
+
+class LiveFinishView(APIView):
+    """Ends the live session: the chunks are joined into one recording and the final notes are queued."""
+
+    def post(self, request, pk):
+        meeting = _live_meeting(request, pk)
+        live.finish(meeting)
+        return Response(_detail(meeting))
+
+
+class MeetingAskView(APIView):
+    """Recall: ask a question across the user's own meetings."""
+
+    def post(self, request):
+        question = str(request.data.get("question", "")).strip()
+        if not question or len(question) > 500:
+            return Response({"question": ["Ask a question (up to 500 characters)."]}, status=400)
+        if not summaries_enabled():
+            return Response({"detail": "AI is not configured on this server.", "code": "summaries_disabled"}, status=503)
+        try:
+            result = recall.ask(request.user, question)
+        except services.ProviderError as exc:
+            return Response({"detail": str(exc), "code": "provider"}, status=502)
+        return Response({"answer": result["answer"], "sources": result["sources"]})
 
 
 class CallTranscriptConsentView(APIView):

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 
 import { ApiError, meetingsApi, type MeetingFilters } from "../../api";
+import { AskMeetings } from "../../components/AskMeetings";
 import { Banner, Button, Chip, Muted, colors, styles } from "../../components/ui";
 import { MEETING_LANGUAGES, formatClock, isProcessing, meetingLanguageName } from "../../lib/meetings";
 import type { MeetingListItem } from "../../types";
@@ -75,6 +76,7 @@ export default function MeetingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       <View style={{ padding: 16, paddingBottom: 8, gap: 10 }}>
         <Button label="New meeting" onPress={() => router.push("/meetings/new")} />
+        <AskMeetings />
         <TextInput
           placeholder="Search titles, transcripts, notes…"
           placeholderTextColor={colors.muted}

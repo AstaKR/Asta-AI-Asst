@@ -105,3 +105,20 @@ was transcribed + translated live and stored at the correct offset.
 | POST | `/api/meetings/{id}/live-started/` | `{recording_started_at_ms}` |
 | POST | `/api/rooms/{code}/transcript/` | call transcript consent `{save}` |
 | POST | `/api/internal/meeting-segments/` | worker only (`X-Worker-Secret`) |
+
+## In-person group meetings (Gemini speaker labels, no LiveKit)
+
+LiveKit is used for calls only. A **Live meeting** is one phone or laptop recording the room:
+
+- The device records in ~40-second chunks; each chunk is sent to `POST /api/meetings/{id}/chunk/` and transcribed by
+  **Gemini** (`MEETING_STT_ENGINE=gemini`, key `GEMINI_API_KEY` or Admin → API keys). Lines come back labelled
+  `Speaker 1`, `Speaker 2`...; the last lines of the previous chunk are passed along so labels stay steady. Rename a
+  speaker by editing a segment.
+- **Live notes**: `POST /api/meetings/{id}/live-notes/` refreshes the Claude notes from what has been said so far
+  (the apps call it about every 90 s).
+- **End meeting**: `POST /api/meetings/{id}/finish/` joins the chunks into one MP3 for playback and queues the final notes.
+- **Recall**: `POST /api/meetings/ask/ {"question": "..."}` answers from the user's own meetings (notes, action items and
+  matching transcript lines) with the meeting and timestamp it came from.
+- Gemini's speaker labels are best-effort (Google marks 3+ speakers as experimental). Test with a real Tamil/Hindi
+  recording before relying on it. Set `MEETING_STT_ENGINE=sarvam` to go back to Sarvam (no speaker labels).
+- Gemini speech-to-text is not counted against the Sarvam daily budget; Gemini and Claude usage is billed by those providers.

@@ -75,7 +75,7 @@
         "expo-audio",
         {
           "microphonePermission": "The microphone is used to record meetings and send your voice in calls so it can be translated.",
-          "enableBackgroundRecording": false
+          "enableBackgroundRecording": true
         }
       ],
       "expo-sharing",

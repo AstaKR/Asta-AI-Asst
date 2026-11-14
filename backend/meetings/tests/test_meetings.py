@@ -481,35 +481,102 @@ def post_segment(room: CallRoom, utt: str, text: str, start_ms: int, end_ms: int
     return APIClient().post("/api/internal/meeting-segments/", body, format="json", HTTP_X_WORKER_SECRET=WORKER_SECRET)
 
 
+class FakeGemini(Transcriber):
+    """Stands in for the speaker-label engine: two speakers, one line each per chunk."""
+
+    name = "gemini"
+
+    def __init__(self):
+        super().__init__()
+        self.prior = []
+        self.calls = 0
+
+    def transcribe(self, pcm, rate, language, on_progress=None):
+        self.calls += 1
+        n = self.calls
+        return [Segment(0, 1500, f"line {n} from one", "en", "Speaker 1"), Segment(1600, 3000, f"line {n} from two", "en", "Speaker 2")]
+
+
 @pytest.mark.django_db
-def test_live_meeting_flow():
-    from livekit import api as lkapi
-
+def test_live_session_chunks_notes_and_finish(monkeypatch, settings):
+    settings.GEMINI_API_KEY = "test-gemini"
+    fake = FakeGemini()
+    monkeypatch.setattr("meetings.live.get_transcriber", lambda engine=None: fake)
     c = client_for("anand")
-    res = c.post(
-        "/api/meetings/live/",
-        {"title": "Site visit", "spoken_language": "ta", "translation_language": "en", "voice_playback": True, "consent": True},
-        format="json",
-    )
+    res = c.post("/api/meetings/live/", {"title": "Team sync", "spoken_language": "auto", "consent": True}, format="json")
     assert res.status_code == 201, res.content
-    meeting_id, code = res.json()["meeting"]["id"], res.json()["room_code"]
-    room = CallRoom.objects.get(code=code)
-    assert room.mode == "meeting" and room.save_transcript
-    token = c.post(f"/api/rooms/{code}/token/").json()["token"]
-    claims = lkapi.TokenVerifier("testkey", "testsecret-testsecret-testsecret-0123").verify(token)
-    assert json.loads(claims.room_config.metadata)["mode"] == "meeting"
-    assert claims.attributes["listen_language"] == "en-IN" and claims.attributes["voice_playback"] == "on"
+    meeting_id = res.json()["meeting"]["id"]
+    assert not CallRoom.objects.exists()  # no LiveKit room for meetings
 
-    started = int(timezone.now().timestamp() * 1000)
-    assert c.post(f"/api/meetings/{meeting_id}/live-started/", {"recording_started_at_ms": started}, format="json").status_code == 204
-    assert post_segment(room, "u1", "வணக்கம்", started + 1500, started + 3000).json()["stored"] == 1
-    # The translation arrives later for the same utterance: updated in place, not duplicated.
-    post_segment(room, "u1", "வணக்கம்", started + 1500, started + 3200, translation="Hello", translation_language="en-IN")
-    seg = TranscriptSegment.objects.get(meeting_id=meeting_id)
-    assert (seg.start_ms, seg.end_ms, seg.translated_text, seg.origin) == (1500, 3200, "Hello", "live")
+    for n in (1, 2):
+        chunk = c.post(f"/api/meetings/{meeting_id}/chunk/", {"file": SimpleUploadedFile("c.wav", wav_file(3))}, format="multipart")
+        assert chunk.status_code == 200, chunk.content
+    body = chunk.json()
+    assert [s["speaker"] for s in body["segments"]] == ["Speaker 1", "Speaker 2"]
+    assert body["segments"][0]["start_ms"] == 3000  # second chunk starts where the first ended
+    assert body["duration_seconds"] == pytest.approx(6.0, abs=0.05)
+    assert fake.prior and "line 1" in fake.prior[-1]  # earlier lines are passed on to keep speaker labels steady
 
-    c.post(f"/api/rooms/{code}/end/")
-    assert Meeting.objects.get(pk=meeting_id).status == "completed"
+    notes = MeetingNotes(summary="Sync.", key_points=[Point(text="Point", segments=[0])], decisions=[], action_items=[], open_questions=[])
+    monkeypatch.setattr("meetings.services.get_summarizer", lambda: PaidFakeSummarizer(notes))
+    res = c.post(f"/api/meetings/{meeting_id}/live-notes/")
+    assert res.status_code == 200 and res.json()["summary"]["summary"] == "Sync."
+    assert Meeting.objects.get(pk=meeting_id).status == "live"  # notes refresh does not end the session
+
+    res = c.post(f"/api/meetings/{meeting_id}/finish/")
+    assert res.status_code == 200
+    meeting = Meeting.objects.get(pk=meeting_id)
+    assert meeting.status == "completed" and meeting.audio and meeting.duration_seconds == pytest.approx(6.0, abs=0.05)
+    assert meeting.jobs.filter(kind="prepare").exists()
+    assert c.post(f"/api/meetings/{meeting_id}/chunk/", {"file": SimpleUploadedFile("c.wav", wav_file(1))}, format="multipart").status_code == 409
+
+
+@pytest.mark.django_db
+def test_live_session_is_private_and_reports_provider_errors(monkeypatch, settings):
+    settings.GEMINI_API_KEY = "test-gemini"
+
+    class Broken(FakeGemini):
+        def transcribe(self, *a, **k):
+            raise ProviderUnavailable("Gemini timed out.")
+
+    monkeypatch.setattr("meetings.live.get_transcriber", lambda engine=None: Broken())
+    a, b = client_for("anand"), client_for("bharat")
+    mid = a.post("/api/meetings/live/", {"title": "T", "spoken_language": "en", "consent": True}, format="json").json()["meeting"]["id"]
+    upload_ = {"file": SimpleUploadedFile("c.wav", wav_file(2))}
+    assert b.post(f"/api/meetings/{mid}/chunk/", upload_, format="multipart").status_code == 404
+    res = a.post(f"/api/meetings/{mid}/chunk/", {"file": SimpleUploadedFile("c.wav", wav_file(2))}, format="multipart")
+    assert res.status_code == 502 and res.json()["code"] == "provider"
+    assert a.post(f"/api/meetings/{mid}/live-notes/").status_code in (400, 503)  # nothing said yet
+
+
+@pytest.mark.django_db
+def test_recall_answers_from_own_meetings_and_drops_made_up_sources(monkeypatch):
+    from types import SimpleNamespace
+
+    from meetings import recall
+
+    owner = client_for("anand")
+    meeting = make_transcribed_meeting(owner)
+    stranger = client_for("bharat")
+    assert stranger.post("/api/meetings/ask/", {"question": "Who sends the report?"}, format="json").json()["answer"] == "There are no meetings to search yet."
+
+    captured = {}
+
+    class FakeClaude:
+        class beta:
+            class messages:
+                @staticmethod
+                def create(**kw):
+                    captured.update(kw)
+                    answer = json.dumps({"answer": "Ravi sends the report by Friday.", "sources": [{"meeting": 1, "segment": 0}, {"meeting": 1, "segment": 99}, {"meeting": 7, "segment": 0}]})
+                    return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=answer)], usage=SimpleNamespace(input_tokens=5, output_tokens=2))
+
+    result = recall.ask(meeting.owner, "Who sends the report?", client=FakeClaude())
+    assert result["answer"].startswith("Ravi")
+    assert [(s["segment"]) for s in result["sources"]] == [0, None]  # unknown meeting dropped, unknown segment cleared
+    prompt = captured["messages"][0]["content"]
+    assert "Ravi will send the report by Friday" in prompt and "[M1#0]" in prompt
+    assert owner.post("/api/meetings/ask/", {"question": ""}, format="json").status_code == 400
 
 
 @pytest.mark.django_db

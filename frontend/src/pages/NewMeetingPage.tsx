@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { meetingsApi } from "../api";
 import { ErrorBanner, Layout } from "../components/Layout";
 import { AudioUploader } from "../components/meetings/AudioUploader";
-import { LiveTranslator } from "../components/meetings/LiveTranslator";
+import { LiveMeeting } from "../components/meetings/LiveMeeting";
 import { MeetingRecorder } from "../components/meetings/MeetingRecorder";
 import type { MeetingConfig } from "../types";
 
 const TABS = [
-  { key: "live", title: "Live translate", hint: "Live transcript + translation while you talk (LiveKit). Audio is recorded too." },
+  { key: "live", title: "Live meeting", hint: "Group meeting in the room: who said what, with live notes. Audio is recorded too." },
   { key: "record", title: "Record", hint: "Record this device’s microphone, then transcribe." },
   { key: "upload", title: "Upload file", hint: "WAV, MP3, M4A, WebM, OGG, FLAC or AAC from a recorder or phone." },
 ] as const;
@@ -37,12 +37,12 @@ export function NewMeetingPage() {
       <div className="card mt-4 p-6">
         {error && <ErrorBanner message={error} />}
         {!config && !error && <p className="text-sm text-muted">Loading…</p>}
-        {config && tab === "live" && <LiveTranslator config={config} />}
+        {config && tab === "live" && <LiveMeeting config={config} />}
         {config && tab === "record" && <MeetingRecorder config={config} />}
         {config && tab === "upload" && <AudioUploader config={config} />}
       </div>
       <p className="mt-4 text-xs text-muted">
-        Audio sources: this device’s microphone (Record, Live), files you upload, and translated calls in this app (enable “Save
+        Audio sources: this device’s microphone (Live meeting, Record), files you upload, and translated calls in this app (enable “Save
         transcript” during a call). Computer system audio and ordinary mobile phone calls cannot be captured by a web app.
       </p>
     </Layout>

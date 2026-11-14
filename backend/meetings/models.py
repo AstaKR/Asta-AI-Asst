@@ -19,7 +19,7 @@ class Meeting(models.Model):
     class Source(models.TextChoices):
         UPLOAD = "upload", "Uploaded file"
         RECORDING = "recording", "Browser recording"
-        LIVE = "live", "Live meeting (LiveKit)"
+        LIVE = "live", "Live meeting"
         CALL = "call", "Translated call (LiveKit)"
 
     class Status(models.TextChoices):
@@ -84,7 +84,7 @@ class Meeting(models.Model):
 class TranscriptSegment(models.Model):
     class Origin(models.TextChoices):
         ASR = "asr", "Speech recognition"
-        LIVE = "live", "Live (LiveKit)"
+        LIVE = "live", "Live"
 
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name="segments")
     index = models.PositiveIntegerField()

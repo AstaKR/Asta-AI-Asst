@@ -184,7 +184,7 @@ def split_on_pauses(
     return out
 
 
-def enhance_speech(pcm: bytes, rate: int = STT_RATE) -> bytes:
+def enhance_speech(pcm: bytes, rate: int = STT_RATE, *, trim: bool = True) -> bytes:
     """Cleans a short phone recording before speech-to-text: removes rumble below ~90 Hz (handling noise, wind),
     trims long silence at both ends and lifts quiet speech to a steady level. Mono 16-bit PCM in and out.
     Never raises: audio it cannot improve is returned unchanged."""
@@ -200,7 +200,7 @@ def enhance_speech(pcm: bytes, rate: int = STT_RATE) -> bytes:
     # Trim leading/trailing quiet, keeping 250 ms around the speech so word edges survive.
     frame = rate // 50  # 20 ms
     n = cleaned.size // frame
-    if n:
+    if n and trim:
         rms = np.sqrt(np.mean(cleaned[: n * frame].reshape(n, frame) ** 2, axis=1))
         loud = np.flatnonzero(rms > max(150.0, float(rms.max()) * 0.06))
         if loud.size:
