@@ -171,7 +171,7 @@ export interface QuickResult {
 }
 
 export interface EngineStatus {
-  engine: "sarvam" | "local";
+  engine: "sarvam";
   ready: boolean;
   languages?: string[];
 }
@@ -180,7 +180,6 @@ export interface AICapabilities {
   translate: EngineStatus;
   stt: EngineStatus;
   tts: EngineStatus;
-  local_service: { configured: boolean; running: boolean; loaded: string[] };
 }
 
 export const quickApi = {

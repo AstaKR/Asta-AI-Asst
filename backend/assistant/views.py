@@ -79,7 +79,7 @@ class _AssistantView(APIView):
     def _guard(self, request):
         if not assistant_enabled():
             return Response(
-                {"detail": "The assistant is not configured on the server (ANTHROPIC_API_KEY or ASSISTANT_PROVIDER=ollama).", "code": "not_configured"},
+                {"detail": "The assistant is not configured on the server (ANTHROPIC_API_KEY).", "code": "not_configured"},
                 status=503,
             )
         if message := limit_reached(request.user):

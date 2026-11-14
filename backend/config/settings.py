@@ -253,34 +253,24 @@ MEDIA_ROOT = Path(env("MEDIA_ROOT", "") or str(BASE_DIR / "media_private"))
 MEDIA_URL = "/media-private/"  # not routed: files are served by the authenticated audio endpoint
 MEETING_MAX_UPLOAD_MB = env_int("MEETING_MAX_UPLOAD_MB", 200)
 MEETING_MAX_DURATION_SECONDS = env_int("MEETING_MAX_DURATION_SECONDS", 2 * 60 * 60)
-# Transcription engine: sarvam (cloud, paid per audio second) | local (faster-whisper, free, optional install)
+# Transcription engine: sarvam (cloud, paid per audio second)
 MEETING_STT_ENGINE = env("MEETING_STT_ENGINE", "sarvam")
 MEETING_STT_MODEL = env("MEETING_STT_MODEL", "saaras:v4")
 MEETING_STT_MODE = env("MEETING_STT_MODE", "codemix")  # codemix handles Tamil/Hindi mixed with English
 MEETING_TRANSLATE_MODEL = env("MEETING_TRANSLATE_MODEL", "mayura:v1")
-LOCAL_WHISPER_MODEL = env("LOCAL_WHISPER_MODEL", "small")
 SARVAM_API_KEY = env("SARVAM_API_KEY", "").strip()
-# Free local open-source AI service (local_ai/, its own virtualenv; see docs/LOCAL_AI.md).
-LOCAL_AI_URL = env("LOCAL_AI_URL", "").strip()  # e.g. http://127.0.0.1:8090 ; empty = not used
-LOCAL_AI_SECRET = env("LOCAL_AI_SECRET", "").strip()
-LOCAL_AI_TIMEOUT_SECONDS = float(env("LOCAL_AI_TIMEOUT_SECONDS", "300"))  # CPU models are slow on laptops
-LOCAL_AI_CHUNK_SECONDS = env_int("LOCAL_AI_CHUNK_SECONDS", 300)  # meeting audio is sent in pieces for progress
-# Which engine each AI job uses: sarvam (cloud, paid) | local (free, this server). Meetings keep MEETING_STT_ENGINE.
+# Which engine each AI job uses (only sarvam for now). Meetings keep MEETING_STT_ENGINE.
 AI_ENGINE = env("AI_ENGINE", "sarvam")
 TRANSLATE_ENGINE = env("TRANSLATE_ENGINE", AI_ENGINE)
 STT_ENGINE = env("STT_ENGINE", AI_ENGINE)
 TTS_ENGINE = env("TTS_ENGINE", AI_ENGINE)
 SARVAM_MIN_REQUEST_INTERVAL = float(env("SARVAM_MIN_REQUEST_INTERVAL", "1.05"))
 PROVIDER_TIMEOUT_SECONDS = float(env("PROVIDER_TIMEOUT_SECONDS", "30"))
-# AI summaries: anthropic | ollama (local) | none. Uses ANTHROPIC_API_KEY (server-side only).
+# AI summaries: anthropic | none. Uses ANTHROPIC_API_KEY (server-side only).
 SUMMARY_PROVIDER = env("SUMMARY_PROVIDER", "anthropic")
 SUMMARY_MODEL = env("SUMMARY_MODEL", "claude-opus-5-5")
 SUMMARY_EFFORT = env("SUMMARY_EFFORT", "medium")
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "").strip()
-# SUMMARY_PROVIDER=ollama: a local model served by Ollama (free). Qwen3 models are Apache-2.0.
-OLLAMA_URL = env("OLLAMA_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = env("OLLAMA_MODEL", "qwen3:4b-instruct")  # instruct = answers directly (plain qwen3:4b is a "thinking" build)
-OLLAMA_TIMEOUT_SECONDS = float(env("OLLAMA_TIMEOUT_SECONDS", "600"))
 # Encrypts provider API keys saved from the admin page (Fernet key; generate with
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())").
 # Required in production; keep it out of the database backups' location.
@@ -308,12 +298,8 @@ QUICK_TTS_SAMPLE_RATE = env_int("SARVAM_TTS_SAMPLE_RATE", 24000)
 
 # ---------- AI assistant (chat + photo translation, Claude) ----------
 # Uses ANTHROPIC_API_KEY. Opus 5.5 at low effort costs roughly Rs 1 per chat reply; claude-haiku-5-5 costs less.
-# Assistant chat + photo translate: anthropic (Claude, needs a key) | ollama (local, free; see docs/LOCAL_AI.md)
+# Assistant chat + photo translate: anthropic (Claude, needs a key)
 ASSISTANT_PROVIDER = env("ASSISTANT_PROVIDER", "anthropic")
-ASSISTANT_OLLAMA_MODEL = env("ASSISTANT_OLLAMA_MODEL", OLLAMA_MODEL)
-ASSISTANT_VISION_MODEL = env("ASSISTANT_VISION_MODEL", "qwen3-vl:4b-instruct")  # Apache-2.0; qwen3-vl:8b-instruct on a big server
-# Local models are slow on CPU: cap reply length so one answer cannot run for minutes.
-ASSISTANT_OLLAMA_MAX_TOKENS = env_int("ASSISTANT_OLLAMA_MAX_TOKENS", 700)
 ASSISTANT_MODEL = env("ASSISTANT_MODEL", "claude-opus-5-5")
 ASSISTANT_EFFORT = env("ASSISTANT_EFFORT", "low")
 ASSISTANT_MAX_TOKENS = env_int("ASSISTANT_MAX_TOKENS", 4000)

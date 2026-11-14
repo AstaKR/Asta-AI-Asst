@@ -53,7 +53,7 @@ Legend: [x] done & verified · [~] implemented, verification pending (needs cred
 - [x] `meetings` app: Meeting, TranscriptSegment, ActionItem, MeetingJob models + migrations (additive only)
 - [x] Upload validation by decoding (WAV/MP3/M4A/AAC/WebM/OGG/FLAC), size/duration limits, private storage, Range streaming, playback MP3
 - [x] DB-backed job runner (`process_meetings`): transcribe → translate → optional notes; retries, stale recovery, failure messages
-- [x] Transcription interface: Sarvam (pause-split, exact offsets) + optional faster-whisper
+- [x] Transcription interface: Sarvam (pause-split, exact offsets)
 - [x] Translation stored separately; per-segment language; mixed speech (codemix)
 - [x] Claude notes with JSON schema + grounding (no invented decisions/owners/deadlines) — [~] needs ANTHROPIC_API_KEY for a live run
 - [x] Search/filter/pagination, owner-only access, segment edits, action items, TXT/DOCX export, PDF via print view
@@ -88,7 +88,7 @@ Legend: [x] done & verified · [~] implemented, verification pending (needs cred
 - [x] Admin dashboard (`adminpanel`): estimated ₹ cost per day (Sarvam + Claude, configurable rates), today's budget meters, activity table, top users; users (search, plan change, deactivate → signs out); plan editing; `manage.py grant_admin` — 15 tests
 - [x] Abandoned rooms count at most their max length in usage
 - [x] Web redesign: token-based light/dark theme (follows OS + toggle), sidebar app shell with mobile drawer, admin section, plan card in Settings
-- [x] Meeting-notes Claude tokens are metered per meeting and included in the admin cost estimate (local Ollama notes are free)
+- [x] Meeting-notes Claude tokens are metered per meeting and included in the admin cost estimate (only Claude notes are priced)
 - [x] Username/password on web and app; mobile number added and verified in Settings (needed for calls by number); change password; forgot password by SMS code to the verified number — 11 tests
 - [ ] Email verification and account lockout; users with no verified number must ask an administrator to reset a forgotten password
 - [ ] Payments (Razorpay) — not connected; plan changes are manual
@@ -96,19 +96,11 @@ Legend: [x] done & verified · [~] implemented, verification pending (needs cred
 - [x] Voice clone research: `docs/VOICE_CLONE_RESEARCH.md` (Sarvam / ElevenLabs / Google / Azure, consent design)
 - [ ] Ringing with the app closed: needs a Firebase project (FCM) for Android push — waiting for go-ahead
 
-## Local open-source AI (no paid keys) — docs/LOCAL_AI.md
+## Cloud AI by API key (Sarvam + Claude)
+- [x] Local open-source AI (IndicTrans2, Whisper, Parler-TTS, Ollama) was removed on 2026-11-14; AI runs by API key only
+- [x] Sarvam smoke test passed with a real key (`scripts/sarvam_smoke_test.py`, ta<->hi, about 2.5-3 s from end of speech to translated audio)
+- [ ] Real Claude key test (notes, assistant, photo translate) and LiveKit Cloud test
 - [x] Exports: CSV, JSON, SRT, VTT added to TXT/Word (web + mobile); search, filters, pagination already existed
-- [x] Local AI service (`local_ai/`, own Python 3.12 venv): IndicTrans2, faster-whisper, Indic Parler-TTS, LRU RAM budget, secret header
-- [x] Backend engine switch (`AI_ENGINE` / per-job), quick tools + meeting translation + meeting transcription via the service; local work is not billed
-- [x] Live calls: `SPEECH_PROVIDER=local` turn-based provider in the worker (own end-of-turn detection, ordered results)
-- [x] Summaries: `SUMMARY_PROVIDER=ollama` (Qwen3 4B, Apache-2.0), same evidence grounding as Claude
 - [x] Web Translate page: language selectors, swap, copy, clear, mic, play/pause/resume/stop, char count, states
 - [x] `GET /api/ai/capabilities/`
-- [x] Whisper measured on the laptop: small 11.4 s / base 3.6 s for 8.2 s of English speech, exact transcripts
-- [x] Ollama + Qwen3 4B installed; real summary: 100 s, correct structure and evidence, one garbled date
-- [!] IndicTrans2 + Indic Parler-TTS: gated on Hugging Face — owner must accept terms and run `hf auth login`
-- [ ] Measure translation and speech latency on the laptop; native listeners check Tamil/Hindi voices
-- [ ] Tamil speech recognition quality with Whisper (real speakers)
-- [ ] Live local call latency on target hardware (expect several seconds per turn without a GPU)
-- [ ] Speaker diarization (not available locally; transcripts show no speaker rather than a guess)
-- [x] Local assistant chat + photo translate (`ASSISTANT_PROVIDER=ollama`, Qwen3 + Qwen3-VL); local requests counted but not priced
+- [ ] Native Tamil/Hindi listeners check the Sarvam voices

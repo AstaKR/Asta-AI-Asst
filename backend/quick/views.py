@@ -93,7 +93,7 @@ class _QuickView(APIView):
         return data.get("voice") or get_preference(request.user).voice or settings.DEFAULT_VOICE
 
     def _finish(self, request, *, kind, data, original, source, stt_seconds, client: Engines, timings=None):
-        # Usage numbers count only billed (Sarvam) work; the local engine is free.
+        # Usage numbers count billed (Sarvam) work.
         target = data["target_language"]
         translate_chars = 0
         translation = original

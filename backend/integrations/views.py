@@ -135,7 +135,7 @@ class InternalProviderKeysView(APIView):
 
 
 class AICapabilitiesView(APIView):
-    """Which engine (sarvam / local) each AI job uses and whether it is ready. Signed-in users only."""
+    """Which engine (Sarvam) each AI job uses and whether it is ready. Signed-in users only."""
 
     def get(self, request):
         return Response(engines.capabilities())

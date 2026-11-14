@@ -72,7 +72,7 @@ class MeetingConfigView(APIView):
                 "engines": available_engines(),
                 "default_engine": settings.MEETING_STT_ENGINE,
                 "summaries_enabled": summaries_enabled(),
-                "summary_model": (settings.OLLAMA_MODEL if settings.SUMMARY_PROVIDER == "ollama" else settings.SUMMARY_MODEL) if summaries_enabled() else None,
+                "summary_model": settings.SUMMARY_MODEL if summaries_enabled() else None,
                 "max_upload_mb": settings.MEETING_MAX_UPLOAD_MB,
                 "max_duration_seconds": settings.MEETING_MAX_DURATION_SECONDS,
                 "allowed_extensions": sorted(audio_lib.ALLOWED_EXTENSIONS),

@@ -36,8 +36,8 @@ Added on top of the existing AI Call Translator without changing its call flow. 
 Upload / Record ──► POST /api/meetings/ ──► file saved privately (MEDIA_ROOT) ──► MeetingJob(transcribe)
                                                                                     │
                    manage.py process_meetings (DB-backed job runner, no Redis) ◄────┘
-                     1. playback MP3   2. decode → 16 kHz → split at pauses   3. STT per piece (Sarvam REST,
-                     or faster-whisper locally)   4. translate per segment   5. (optional) Claude notes
+                     1. playback MP3   2. decode → 16 kHz → split at pauses   3. STT per piece (Sarvam REST)
+                     4. translate per segment   5. (optional) Claude notes
 
 Live translate ──► POST /api/meetings/live/ → CallRoom(mode=meeting) → LiveKit token → worker joins
                      worker: STT → (translate) → (TTS to you) ──► POST /api/internal/meeting-segments/
@@ -47,7 +47,7 @@ Live translate ──► POST /api/meetings/live/ → CallRoom(mode=meeting) →
 - **Why a job runner:** transcription takes minutes, so it can't run inside a web request; the existing stack has
   no queue, and a DB-backed runner (atomic claim, retries for transient errors, stale-job recovery) avoids adding
   Redis/Celery. Several runners can run in parallel safely.
-- **Provider interfaces:** `meetings/transcription/` (Sarvam, local Whisper) and `meetings/summary/` (Claude).
+- **Provider interfaces:** `meetings/transcription/` (Sarvam) and `meetings/summary/` (Claude).
   Adding another provider (e.g. OpenAI) means one new module plus one line in `get_summarizer()`.
 - **Language codes:** meetings use `ta`, `en`, `hi`; providers get BCP-47 (`ta-IN`, …) via `meetings/languages.py`.
 
@@ -60,12 +60,12 @@ validated with Pydantic before saving.
 
 ## Engines, accuracy, latency, cost
 
-| | Sarvam (default) | faster-whisper (optional) |
-|---|---|---|
-| Tamil / Hindi quality | Built for Indian languages; verified on test sentences (exact transcripts) | Noticeably weaker for Tamil; fine for English |
-| Mixed speech | `codemix` mode | Auto language per file, not per segment |
-| Speed | Paced at ~1 request/s (60/min plan limit): ~1 min of processing per ~1 min of speech | CPU only on this PC (i3-1315U): roughly real-time or slower with `small` |
-| Cost | ₹30 per hour of audio (silence is not billed) + ₹20 per 10K translated chars | Free (0.5 GB model download on first use) |
+| | Sarvam |
+|---|---|
+| Tamil / Hindi quality | Built for Indian languages; verified on test sentences (exact transcripts) |
+| Mixed speech | `codemix` mode |
+| Speed | Paced at ~1 request/s (60/min plan limit): ~1 min of processing per ~1 min of speech |
+| Cost | ₹30 per hour of audio (silence is not billed) + ₹20 per 10K translated chars |
 
 Claude notes (`claude-opus-5-5`, $4 / $20 per million input/output tokens): about 15K input + 2K output tokens for an
 hour-long meeting ≈ **$0.10 (≈ ₹8–9)**. Disabled when `ANTHROPIC_API_KEY` is empty.
@@ -77,7 +77,7 @@ was transcribed + translated live and stored at the correct offset.
 ## Limits and switches
 
 `MEETING_MAX_UPLOAD_MB`, `MEETING_MAX_DURATION_SECONDS`, daily AI budget shared with calls (`DAILY_STT_SECONDS_LIMIT`,
-`DAILY_TRANSLATE_CHARS_LIMIT` — meeting usage now counts toward them), `MEETING_STT_ENGINE=local` (no STT cost),
+`DAILY_TRANSLATE_CHARS_LIMIT` — meeting usage now counts toward them),
 `SUMMARY_PROVIDER=none` or empty `ANTHROPIC_API_KEY` (no summary cost), `TRANSLATION_ENABLED=false` (no live AI).
 
 ## Privacy

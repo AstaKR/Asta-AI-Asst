@@ -71,17 +71,11 @@ class Usage:
 
 
 def assistant_enabled() -> bool:
-    if settings.ASSISTANT_PROVIDER == "ollama":
-        return True  # local; a request reports clearly if Ollama or the model is missing
     return settings.ASSISTANT_PROVIDER == "anthropic" and bool(secrets.get("anthropic_api_key"))
 
 
 def get_assistant():
-    """ASSISTANT_PROVIDER: anthropic (Claude, needs a key) | ollama (local models, free)."""
-    if settings.ASSISTANT_PROVIDER == "ollama":
-        from .ollama import OllamaAssistantClient
-
-        return OllamaAssistantClient()
+    """ASSISTANT_PROVIDER: anthropic (Claude, needs a key)."""
     return AssistantClient()
 
 

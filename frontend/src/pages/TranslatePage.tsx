@@ -25,11 +25,10 @@ function LanguageSelect({ id, value, onChange, allowDetect }: { id: string; valu
 
 function EngineNote({ caps }: { caps: AICapabilities | null }) {
   if (!caps) return null;
-  const local = caps.translate.engine === "local";
   const notReady = [caps.translate, caps.stt, caps.tts].some((e) => !e.ready);
   return (
     <p className="text-xs text-muted">
-      {local ? "Free local AI on this server — your text and voice are not sent to an outside AI provider." : "Translated by Sarvam AI."}
+      Translated by Sarvam AI.
       {notReady && " Some features are not set up yet on this server."}
     </p>
   );

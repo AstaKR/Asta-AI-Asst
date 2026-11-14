@@ -5,7 +5,7 @@ Target: **2 × Intel Xeon Silver 4110 (16 cores / 32 threads), 64 GB RAM, 2.1 TB
 This machine runs the web app, API, database, meeting jobs and the call worker. Call audio goes through **LiveKit Cloud**
 (project "Asta AI", free Build plan), so the server needs no call ports. All AI runs in the cloud by API key:
 **Sarvam** (translation, speech recognition, speech output) and **Claude** (meeting notes, assistant, photo translate).
-(Running LiveKit on this server instead is described at the end. Local models are no longer deployed; see docs/LOCAL_AI.md.)
+(Running LiveKit on this server instead is described at the end. Local models are no longer part of this project.)
 
 > Status: these files are written and the YAML is validated, but they have **not been run on a Linux server yet**.
 > The first deployment is the test — go step by step and check each one.

@@ -42,19 +42,6 @@ class SarvamConfig:
 
 
 @dataclass(frozen=True)
-class LocalAIConfig:
-    """SPEECH_PROVIDER=local: the free open-source models of the local AI service (local_ai/)."""
-
-    url: str = ""
-    secret: str = ""
-    timeout: float = 120.0
-    vad_threshold_dbfs: float = -42.0  # louder than this counts as speech
-    end_silence_ms: int = 700  # this much silence ends an utterance
-    max_utterance_seconds: float = 15.0
-    min_utterance_ms: int = 300
-
-
-@dataclass(frozen=True)
 class WorkerConfig:
     agent_name: str
     translation_enabled: bool
@@ -71,7 +58,6 @@ class WorkerConfig:
     phone_default_language: str
     phone_announcement: bool
     sarvam: SarvamConfig
-    local: LocalAIConfig = LocalAIConfig()
 
 
 def load_config() -> WorkerConfig:
@@ -103,14 +89,6 @@ def load_config() -> WorkerConfig:
             tts_sample_rate=_int("SARVAM_TTS_SAMPLE_RATE", 24000),
             default_speaker=os.environ.get("SARVAM_DEFAULT_SPEAKER", "shubh"),
             timeout=_float("PROVIDER_TIMEOUT_SECONDS", 10),
-        ),
-        local=LocalAIConfig(
-            url=os.environ.get("LOCAL_AI_URL", "").strip(),
-            secret=os.environ.get("LOCAL_AI_SECRET", "").strip(),
-            timeout=_float("LOCAL_AI_LIVE_TIMEOUT_SECONDS", 120),
-            vad_threshold_dbfs=_float("LOCAL_VAD_THRESHOLD_DBFS", -42),
-            end_silence_ms=_int("LOCAL_END_SILENCE_MS", 700),
-            max_utterance_seconds=_float("LOCAL_MAX_UTTERANCE_SECONDS", 15),
         ),
     )
 

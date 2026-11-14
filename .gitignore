@@ -8,7 +8,6 @@ secrets/
 
 # Python
 .venv/
-.venv-localai/
 __pycache__/
 *.pyc
 .pytest_cache/

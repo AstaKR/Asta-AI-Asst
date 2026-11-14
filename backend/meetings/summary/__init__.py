@@ -13,18 +13,12 @@ def get_summarizer() -> SummaryProvider:
         from .anthropic_provider import AnthropicSummaryProvider
 
         return AnthropicSummaryProvider()
-    if provider == "ollama":
-        from .ollama_provider import OllamaSummaryProvider
-
-        return OllamaSummaryProvider()
     if provider in ("", "none"):
         raise ProviderNotConfigured("AI summaries are turned off (SUMMARY_PROVIDER=none).")
     raise ProviderNotConfigured(f"Unknown SUMMARY_PROVIDER {provider!r}")
 
 
 def summaries_enabled() -> bool:
-    if settings.SUMMARY_PROVIDER == "ollama":
-        return True  # local; a job reports clearly if Ollama or the model is missing
     return settings.SUMMARY_PROVIDER == "anthropic" and bool(secrets.get("anthropic_api_key"))
 
 

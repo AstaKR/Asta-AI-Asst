@@ -150,10 +150,9 @@ def test_upload_requires_consent_and_valid_languages():
 
 
 @pytest.mark.django_db
-def test_unavailable_local_engine_is_refused():
+def test_unknown_engine_is_refused():
     c = client_for("anand")
-    res = upload(c, engine="local")
-    assert res.status_code == 503 and res.json()["code"] == "engine_unavailable"
+    assert upload(c, engine="local").status_code == 400
 
 
 @pytest.mark.django_db

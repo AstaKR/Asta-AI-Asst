@@ -32,15 +32,6 @@
         "dev"
       ],
       "port": 5173
-    },
-    {
-      "name": "local-ai",
-      "runtimeExecutable": ".venv-localai/Scripts/python.exe",
-      "runtimeArgs": [
-        "-m",
-        "local_ai.server"
-      ],
-      "port": 8090
     }
   ]
 }

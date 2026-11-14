@@ -9,14 +9,3 @@ def _fresh_provider_keys():
     secrets.clear_cache()
     yield
     secrets.clear_cache()
-
-
-@pytest.fixture(autouse=True)
-def _no_real_local_ai(settings):
-    """Tests never reach a running local AI service (.env may point at one); tests that need it mock it."""
-    from integrations import local_ai
-
-    settings.LOCAL_AI_URL = ""
-    local_ai.clear_health_cache()
-    yield
-    local_ai.clear_health_cache()

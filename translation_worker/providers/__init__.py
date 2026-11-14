@@ -8,8 +8,4 @@ def create_provider(cfg: WorkerConfig) -> SpeechProvider:
         from .sarvam import SarvamProvider
 
         return SarvamProvider(cfg.sarvam)
-    if cfg.provider == "local":
-        from .local import LocalProvider
-
-        return LocalProvider(cfg.local)
     raise ProviderConfigError(f"Unknown SPEECH_PROVIDER {cfg.provider!r}")

@@ -1,14 +1,14 @@
 import * as Clipboard from "expo-clipboard";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 
 import { ApiError, assistantApi, quickApi } from "../api";
 import { Banner, Button, Card, Muted, Screen, colors, styles } from "../components/ui";
 import { useQuickTranslate } from "../hooks/useQuickTranslate";
 import { MEETING_LANGUAGES } from "../lib/meetings";
-import type { AssistantConfig, PhotoTranslation } from "../types";
+import type { PhotoTranslation } from "../types";
 
 // Text stays readable at this size, and smaller images cost fewer AI tokens.
 const MAX_EDGE = 1600;
@@ -20,12 +20,7 @@ export default function PhotoTranslateScreen() {
   const [result, setResult] = useState<PhotoTranslation | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [config, setConfig] = useState<AssistantConfig | null>(null);
   const audio = useQuickTranslate();
-
-  useEffect(() => {
-    assistantApi.config().then(setConfig).catch(() => undefined);
-  }, []);
 
   async function pick(source: "camera" | "library") {
     setError("");
@@ -93,9 +88,7 @@ export default function PhotoTranslateScreen() {
           </View>
           <Muted style={{ marginTop: 8, fontSize: 12 }}>
             Signs, menus, letters, forms or screenshots.{" "}
-            {config?.provider === "ollama"
-              ? "The image is read by AI on our own server; it is not stored."
-              : "The image is sent to Claude (Anthropic) to read; it is not stored."}
+            The image is sent to Claude (Anthropic) to read; it is not stored.
           </Muted>
         </Card>
 

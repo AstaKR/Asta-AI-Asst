@@ -1,11 +1,11 @@
 from django.conf import settings
 
-from integrations import local_ai, secrets
+from integrations import secrets
 
 from ..errors import ProviderNotConfigured
 from .base import Segment, Transcriber
 
-ENGINES = ("sarvam", "local")
+ENGINES = ("sarvam",)
 
 
 def get_transcriber(engine: str | None = None) -> Transcriber:
@@ -14,28 +14,11 @@ def get_transcriber(engine: str | None = None) -> Transcriber:
         from .sarvam import SarvamTranscriber
 
         return SarvamTranscriber()
-    if engine == "local":
-        if local_ai.configured():  # the shared local AI service (models loaded once, own virtualenv)
-            from .local_service import LocalServiceTranscriber
-
-            return LocalServiceTranscriber()
-        from .local_whisper import LocalWhisperTranscriber  # in-process fallback
-
-        return LocalWhisperTranscriber()
     raise ProviderNotConfigured(f"Unknown transcription engine {engine!r}")
 
 
 def available_engines() -> dict[str, bool]:
-    if local_ai.configured():
-        local = bool(((local_ai.health() or {}).get("stt") or {}).get("installed"))
-    else:
-        try:
-            import faster_whisper  # noqa: F401
-
-            local = True
-        except ImportError:
-            local = False
-    return {"sarvam": bool(secrets.get("sarvam_api_key")), "local": local}
+    return {"sarvam": bool(secrets.get("sarvam_api_key"))}
 
 
 __all__ = ["ENGINES", "Segment", "Transcriber", "available_engines", "get_transcriber"]

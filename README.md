@@ -89,9 +89,7 @@ npm --prefix frontend run dev
 .\.venv\Scripts\python backend\manage.py process_meetings
 ```
 
-Optional free local transcription (slow on small laptops, weaker Tamil):
-`.\.venv\Scripts\pip install -r backend\requirements-local-stt.txt`, then pick *Local Whisper* when uploading
-or set `MEETING_STT_ENGINE=local`. AI meeting notes need `ANTHROPIC_API_KEY` in `.env`.
+AI meeting notes need `ANTHROPIC_API_KEY` in `.env`.
 
 Open <http://localhost:5173>. The port in terminal 2 must match `BACKEND_INTERNAL_URL` in `.env`
 (the Vite dev server proxies `/api` there, and the worker reports usage there).
@@ -168,7 +166,7 @@ All settings are environment variables — see [.env.example](.env.example) for 
 | `MAX_CALL_DURATION_SECONDS` | Hard per-call limit (worker ends the room, backend refuses new tokens) |
 | `DAILY_*_LIMIT`, `PER_CALL_*_LIMIT` | Usage caps; when hit, translation stops and calls fall back to original voices |
 | `LOCAL_SPEECH_GATE` | Don't stream silence to the (per-second billed) STT API |
-| `MEETING_STT_ENGINE` | `sarvam` (default, paid per audio second) or `local` (faster-whisper, free) |
+| `MEETING_STT_ENGINE` | `sarvam` (paid per audio second) |
 | `ANTHROPIC_API_KEY`, `SUMMARY_MODEL` | AI meeting notes (Claude); empty key = notes off, no charges |
 | `MEETING_MAX_UPLOAD_MB`, `MEETING_MAX_DURATION_SECONDS` | Upload limits (default 200 MB, 2 h) |
 | `INTERRUPT_ON_LISTENER_SPEECH` | Stop playing a translation to someone when they start speaking (default off: no content loss) |

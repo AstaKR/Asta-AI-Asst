@@ -121,13 +121,13 @@ def test_overview_costs_and_counts():
 
 
 @pytest.mark.django_db
-def test_overview_counts_claude_meeting_notes_but_not_local_ones():
+def test_overview_counts_claude_meeting_notes_only_when_anthropic():
     from meetings.models import Meeting
 
     admin, c = login("boss", staff=True)
     base = dict(owner=admin, title="m", source="upload", consent_confirmed_at=timezone.now(), recorded_at=timezone.now(), summary_generated_at=timezone.now())
     Meeting.objects.create(summary_model="anthropic:claude-test", summary_input_tokens=1_000_000, summary_output_tokens=0, **base)
-    Meeting.objects.create(summary_model="ollama:qwen3", summary_input_tokens=5_000_000, summary_output_tokens=0, **base)
+    Meeting.objects.create(summary_model="none:test", summary_input_tokens=5_000_000, summary_output_tokens=0, **base)
     today = c.get("/api/admin/overview/?days=7").json()["days"][-1]
     assert today["cost_inr"]["claude"] == 352.0  # only the Claude notes: 1M input tokens = $4 x 88
 
