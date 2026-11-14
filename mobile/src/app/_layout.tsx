@@ -24,7 +24,7 @@ export default function RootLayout() {
         <Stack.Screen name="call/[code]" options={{ title: "Call", headerBackVisible: false, gestureEnabled: false }} />
         <Stack.Screen name="summary/[code]" options={{ title: "Call summary", headerBackVisible: false }} />
         <Stack.Screen name="translate" options={{ title: "Instant translate" }} />
-        <Stack.Screen name="face" options={{ title: "Face to face" }} />
+        <Stack.Screen name="face" options={{ headerShown: false }} />
         <Stack.Screen name="photo" options={{ title: "Photo translate" }} />
         <Stack.Screen name="dial" options={{ title: "Dial" }} />
         <Stack.Screen name="meetings/new" options={{ title: "New meeting" }} />

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, quickApi, type QuickResult } from "../api";
-import { MicIcon, SwapIcon } from "../components/Icons";
+import { MicIcon, SpeakerIcon, SwapIcon } from "../components/Icons";
 import { ErrorBanner, Layout, PageHeader } from "../components/Layout";
 import { pickRecorderFormat } from "../lib/meetings";
 import { createTurnDetector, levelDb } from "../lib/vad";
 
 type Side = "a" | "b";
-type Mode = "hold" | "auto";
+type Mode = "tap" | "auto";
 const other = (s: Side): Side => (s === "a" ? "b" : "a");
 const LANGS = [
   { code: "ta", native: "தமிழ்", name: "Tamil" },
@@ -18,15 +18,16 @@ const MAX_HOLD_MS = 30000;
 
 /**
  * Face-to-face conversation with one device between two people (like an interpreter).
- * Hold to talk: each person holds their own button. Hands-free: the device listens, works out who
- * spoke from the language, and speaks the translation to the other person.
+ * Each panel shows the latest sentence in its own language: what that person said, or the translation of what the
+ * other said (tap the speaker to hear it again). Tap the mic to speak and tap again to send. Hands-free: the device
+ * listens, works out who spoke from the language, and speaks the translation to the other person.
  */
 export function FaceToFacePage() {
   const [lang, setLang] = useState<Record<Side, string>>({ a: "ta", b: "hi" });
-  const [mode, setMode] = useState<Mode>("hold");
+  const [mode, setMode] = useState<Mode>("tap");
   const [speak, setSpeak] = useState(true);
   const [table, setTable] = useState(false); // person A sits opposite: their side is upside down
-  const [last, setLast] = useState<Partial<Record<Side, QuickResult>>>({});
+  const [last, setLast] = useState<{ speaker: Side; result: QuickResult } | null>(null);
   const [recording, setRecording] = useState<Side | "auto" | null>(null);
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false); // hands-free armed
@@ -97,6 +98,16 @@ export function FaceToFacePage() {
     });
   }
 
+  /** Fetches and plays the voice for a result whose text is already on screen. */
+  async function replay(r: QuickResult) {
+    try {
+      const v = await quickApi.speak({ text: r.translation, language: r.target_language });
+      await play({ ...r, ...v });
+    } catch {
+      /* voice is optional: the text stays on screen */
+    }
+  }
+
   /** Sends one clip. `side` = who spoke (hold mode); undefined = detect from the language (hands-free). */
   async function translate(blob: Blob, side?: Side): Promise<boolean> {
     setBusy(true);
@@ -106,7 +117,7 @@ export function FaceToFacePage() {
         ? { source_language: l[side], target_language: l[other(side)], speak: false }
         : { source_language: "auto", target_language: l.b, speak: false, pair: `${l.a},${l.b}` });
       const speaker: Side = side ?? (r.source_language === l.a ? "a" : "b");
-      setLast({ [speaker]: r });
+      setLast({ speaker, result: r });
       setError("");
       if (speakRef.current && r.translation) {
         // Text is already on screen; fetch the (slower) voice now.
@@ -140,11 +151,15 @@ export function FaceToFacePage() {
       const blob = await clip.done;
       setRecording(null);
       releaseMic();
-      if (Date.now() - started < 400 || !blob) return setError("Hold the button while you speak.");
+      if (Date.now() - started < 400 || !blob) return setError("Tap the mic, speak, then tap again.");
       await translate(blob, side);
     };
     holdStop.current = finish;
     holdTimer.current = setTimeout(() => void finish(), MAX_HOLD_MS);
+  }
+  function toggleMic(side: Side) {
+    if (recording === side) holdEnd();
+    else void holdStart(side);
   }
   function holdEnd() {
     const f = holdStop.current;
@@ -219,59 +234,73 @@ export function FaceToFacePage() {
   }
 
   const half = (side: Side) => {
-    const heard = last[other(side)]; // what the other person said, in my language
-    const said = last[side];
+    const mine = last?.speaker === side;
+    const text = last ? (mine ? last.result.original : last.result.translation) : "";
     const active = recording === side;
-    const name = LANGS.find((l) => l.code === lang[side])?.name ?? "";
+    const lname = LANGS.find((l) => l.code === lang[side]);
+    const name = lname?.name ?? "";
+    const accent = side === "a" ? "text-brand" : "text-accent";
+    const bar = side === "a" ? "bg-brand" : "bg-accent";
+    const ring = side === "a" ? "border-brand" : "border-accent";
+    const hint = active ? "Listening… tap to send" : busy ? "Translating…" : mode === "auto" ? "Just speak, then pause" : "Tap on the mic to speak";
     return (
-      <section className={`card flex min-h-[320px] flex-1 flex-col gap-4 p-5 ${table && side === "a" ? "rotate-180" : ""}`} aria-label={`${name} speaker`}>
-        <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Language">
-          {LANGS.map((l) => (
-            <button
-              key={l.code}
-              role="radio"
-              aria-checked={lang[side] === l.code}
-              disabled={Boolean(recording) || busy || listening || l.code === lang[other(side)]}
-              onClick={() => setLang({ ...lang, [side]: l.code })}
-              className={`rounded-full border px-4 py-1.5 text-sm font-semibold disabled:opacity-40 ${
-                lang[side] === l.code ? "border-brand bg-brand-soft text-brand" : "border-line text-ink"
-              }`}
-            >
-              {l.native}
-            </button>
-          ))}
+      <section
+        className={`card glow-border flex min-h-[340px] flex-1 flex-col overflow-hidden ${table && side === "a" ? "rotate-180" : ""}`}
+        aria-label={`${name} speaker`}
+      >
+        <div className={`h-1 ${bar}`} />
+        <div className="flex flex-1 flex-col gap-4 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Language">
+              {LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  role="radio"
+                  aria-checked={lang[side] === l.code}
+                  disabled={Boolean(recording) || busy || listening || l.code === lang[other(side)]}
+                  onClick={() => setLang({ ...lang, [side]: l.code })}
+                  className={`rounded-full border px-3.5 py-1 text-sm font-semibold transition disabled:opacity-35 ${
+                    lang[side] === l.code ? `${ring} bg-subtle ${accent}` : "border-line text-muted hover:text-ink"
+                  }`}
+                >
+                  {l.native}
+                </button>
+              ))}
+            </div>
+            {last && !mine && (
+              <button className="btn-ghost h-10 w-10 shrink-0 rounded-full p-0" aria-label="Play translation again" title="Play again" onClick={() => void replay(last.result)}>
+                <SpeakerIcon width={22} height={22} />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-1 items-center">
+            {text ? (
+              <p className={`text-3xl leading-snug font-semibold sm:text-4xl ${mine ? accent : "text-ink"}`} aria-live="polite">
+                {text}
+              </p>
+            ) : (
+              <p className="text-lg text-muted">{mode === "auto" ? `Speak ${name} — the translation is spoken automatically.` : `Tap the mic and speak ${name}.`}</p>
+            )}
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            {mode === "tap" && (
+              <div className="relative grid h-24 w-24 place-items-center">
+                {active && <span className="absolute inset-0 animate-ping rounded-full border-2 border-danger" />}
+                <button
+                  onClick={() => toggleMic(side)}
+                  disabled={Boolean(recording && !active) || busy || !format}
+                  aria-label={active ? "Stop and translate" : `Tap to speak ${name}`}
+                  className={`relative grid h-20 w-20 select-none place-items-center rounded-full border-[3px] transition disabled:opacity-45 ${
+                    active ? "border-danger bg-danger text-white" : `${ring} bg-canvas ${accent} hover:shadow-(--shadow-glow)`
+                  }`}
+                >
+                  <MicIcon width={32} height={32} />
+                </button>
+              </div>
+            )}
+            <p className="rounded-full border border-line bg-subtle px-4 py-1.5 text-sm text-muted">{hint}</p>
+          </div>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          {heard ? (
-            <button className="text-2xl font-semibold leading-snug text-ink" title="Play again" onClick={() => void play(heard)}>
-              {heard.translation}
-            </button>
-          ) : (
-            !said && <p className="text-muted">{mode === "hold" ? "Hold the button and speak" : `Speak ${name} — the translation is spoken automatically`}</p>
-          )}
-          {said && (
-            <p className="mt-3 text-sm text-muted">
-              You: {said.original}
-            </p>
-          )}
-        </div>
-        {mode === "hold" && (
-          <button
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              void holdStart(side);
-            }}
-            onPointerUp={holdEnd}
-            onPointerCancel={holdEnd}
-            onKeyDown={(e) => (e.key === " " || e.key === "Enter") && !e.repeat && void holdStart(side)}
-            onKeyUp={(e) => (e.key === " " || e.key === "Enter") && holdEnd()}
-            disabled={Boolean(recording && !active) || busy || !format}
-            className={`btn h-16 w-full select-none rounded-full text-lg text-white ${active ? "bg-danger" : "bg-brand hover:bg-brand-strong"} disabled:opacity-50`}
-            aria-label={`Hold to speak ${name}`}
-          >
-            <MicIcon width={22} height={22} /> {active ? "Listening… release to translate" : busy ? "Translating…" : `Hold to speak ${name}`}
-          </button>
-        )}
       </section>
     );
   };
@@ -284,15 +313,15 @@ export function FaceToFacePage() {
         description="One device between two people. Each speaks their own language and hears the other in theirs."
         actions={
           <div className="flex rounded-full border border-line p-1 text-sm" role="radiogroup" aria-label="Mode">
-            {(["hold", "auto"] as Mode[]).map((m) => (
+            {(["tap", "auto"] as Mode[]).map((m) => (
               <button
                 key={m}
                 role="radio"
                 aria-checked={mode === m}
                 onClick={() => changeMode(m)}
-                className={`rounded-full px-4 py-1.5 font-semibold ${mode === m ? "bg-brand text-white" : "text-muted"}`}
+                className={`rounded-full px-4 py-1.5 font-semibold transition ${mode === m ? "bg-gradient-to-br from-brand to-neon text-[#050816]" : "text-muted hover:text-ink"}`}
               >
-                {m === "hold" ? "Hold to talk" : "Hands-free"}
+                {m === "tap" ? "Tap to talk" : "Hands-free"}
               </button>
             ))}
           </div>
