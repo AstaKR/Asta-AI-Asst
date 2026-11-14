@@ -24,7 +24,7 @@ export function StartPage() {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-semibold tracking-tight">Calls</h1>
+      <h1 className="gradient-text text-3xl font-bold tracking-tight">Calls</h1>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="card flex flex-col p-6">
           <h2 className="font-semibold">Start a new call</h2>

@@ -48,7 +48,7 @@ export function SummaryPage() {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-semibold tracking-tight">Call summary</h1>
+      <h1 className="gradient-text text-3xl font-bold tracking-tight">Call summary</h1>
       {error && <div className="mt-4"><ErrorBanner message={error} /></div>}
       {room && (
         <div className="mt-6 space-y-4">

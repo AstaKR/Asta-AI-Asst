@@ -59,7 +59,7 @@ export function JoinPage() {
   return (
     <Layout>
       <p className="text-sm font-medium text-brand">Join call · {code}</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+      <h1 className="gradient-text mt-1 text-3xl font-bold tracking-tight">
         {preview?.host_name ? `${preview.host_name} invited you to a call` : "Join a call"}
       </h1>
       <div className="card mt-6 space-y-6 p-6">

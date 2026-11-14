@@ -39,11 +39,13 @@ const ADMIN_NAV: { to: string; label: string; icon: Icon }[] = [
 
 export function Brand() {
   return (
-    <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight text-ink">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
-        <GlobeIcon width={18} height={18} />
+    <Link to="/" className="group flex items-center gap-2.5 font-semibold tracking-tight text-ink">
+      <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-neon text-[#050816] shadow-[0_0_24px_-2px_rgb(138_123_255/0.9)] transition group-hover:rotate-6">
+        <GlobeIcon width={19} height={19} />
       </span>
-      <span>AI Call Translator</span>
+      <span className="leading-tight">
+        AI Call <span className="gradient-text">Translator</span>
+      </span>
     </Link>
   );
 }
@@ -96,8 +98,10 @@ function NavItem({ to, label, icon: I, onNavigate }: { to: string; label: string
       end={to === "/admin"}
       onClick={onNavigate}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-          isActive ? "bg-brand-soft text-brand" : "text-muted hover:bg-subtle hover:text-ink"
+        `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+          isActive
+            ? "bg-gradient-to-r from-brand-soft to-transparent text-ink before:absolute before:top-2 before:bottom-2 before:left-0 before:w-[3px] before:rounded-full before:bg-neon before:shadow-[0_0_12px_var(--color-neon)]"
+            : "text-muted hover:translate-x-0.5 hover:bg-subtle hover:text-ink"
         }`
       }
     >
@@ -122,14 +126,14 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
       {user?.is_staff && (
         <nav className="flex flex-col gap-1" aria-label="Admin">
-          <p className="eyebrow px-3 pb-1">Admin</p>
+          <p className="eyebrow px-3 pb-1">// admin</p>
           {ADMIN_NAV.map((n) => (
             <NavItem key={n.to} {...n} onNavigate={onNavigate} />
           ))}
         </nav>
       )}
-      <div className="mt-auto flex items-center gap-3 rounded-xl border border-line p-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft text-sm font-semibold text-brand">
+      <div className="mt-auto flex items-center gap-3 rounded-2xl border border-line bg-subtle p-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand to-pink text-sm font-bold text-[#050816]">
           {name.slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
@@ -157,7 +161,7 @@ export function Layout({ children, wide = false }: { children: ReactNode; wide?:
   if (!user) {
     return (
       <div className="flex min-h-full flex-col">
-        <header className="sticky top-0 z-20 border-b border-line bg-surface/80 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-line bg-canvas/60 backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
             <Brand />
             <div className="flex items-center gap-2">
@@ -177,13 +181,13 @@ export function Layout({ children, wide = false }: { children: ReactNode; wide?:
   return (
     <div className="min-h-full lg:grid lg:grid-cols-[260px_1fr]">
       <IncomingCall />
-      <aside className="sticky top-0 hidden h-screen border-r border-line bg-surface lg:block">
+      <aside className="sticky top-0 hidden h-screen border-r border-line bg-canvas/50 backdrop-blur-2xl lg:block">
         <Sidebar />
       </aside>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <button className="absolute inset-0 bg-black/40" aria-label="Close menu" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-surface shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-canvas/95 shadow-xl backdrop-blur-2xl">
             <button className="btn-ghost absolute top-4 right-3 h-9 w-9 p-0" onClick={() => setOpen(false)} aria-label="Close menu">
               <CloseIcon width={18} height={18} />
             </button>
@@ -192,7 +196,7 @@ export function Layout({ children, wide = false }: { children: ReactNode; wide?:
         </div>
       )}
       <div className="flex min-h-full min-w-0 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-surface/85 px-4 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas/60 px-4 backdrop-blur-xl lg:hidden">
           <button className="btn-ghost h-9 w-9 p-0" onClick={() => setOpen(true)} aria-label="Open menu">
             <MenuIcon width={20} height={20} />
           </button>
@@ -209,8 +213,8 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: st
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
-        <h1 className="gradient-text text-3xl font-bold tracking-tight">{title}</h1>
+        {eyebrow && <p className="eyebrow mb-1.5">// {eyebrow}</p>}
+        <h1 className="gradient-text text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -220,7 +224,7 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: st
 
 export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss?: () => void }) {
   return (
-    <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+    <div role="alert" className="flex items-start justify-between gap-3 rounded-2xl border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger shadow-[0_0_30px_-10px_var(--color-danger)]">
       <span>{message}</span>
       {onDismiss && (
         <button onClick={onDismiss} className="font-semibold" aria-label="Dismiss">

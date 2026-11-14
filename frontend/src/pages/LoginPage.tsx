@@ -4,6 +4,7 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api";
 import { useAuth } from "../auth";
 import { ErrorBanner, Layout } from "../components/Layout";
+import { VoiceOrb } from "../components/VoiceOrb";
 
 function safeNext(next: string | null): string {
   // Only allow in-app relative paths (prevents open redirects).
@@ -45,9 +46,18 @@ export function LoginPage() {
   }
 
   return (
-    <Layout>
-      <div className="mx-auto max-w-md">
-        <h1 className="text-2xl font-semibold tracking-tight">
+    <Layout wide>
+      <div className="grid items-center gap-10 lg:grid-cols-2">
+        <div className="hidden lg:block">
+          <p className="eyebrow">// secure access</p>
+          <h2 className="mt-3 text-4xl font-bold tracking-tight">
+            Talk across <span className="gradient-text neon-text">languages</span>, instantly.
+          </h2>
+          <p className="mt-4 max-w-md text-muted">Sign in to start a call, translate on the spot or turn a meeting into a transcript with notes.</p>
+          <VoiceOrb className="mt-4 max-w-[340px]" />
+        </div>
+      <div className="mx-auto w-full max-w-md">
+        <h1 className="gradient-text text-3xl font-bold tracking-tight">
           {mode === "login" ? "Sign in" : mode === "register" ? "Create your account" : "Reset your password"}
         </h1>
         <p className="mt-1 text-sm text-muted">Both people on a call need an account.</p>
@@ -111,6 +121,7 @@ export function LoginPage() {
             </button>
           )}
         </form>
+      </div>
       </div>
     </Layout>
   );

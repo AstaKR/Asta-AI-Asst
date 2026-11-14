@@ -54,7 +54,7 @@ export function MeetingsPage() {
   return (
     <Layout wide>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Meetings</h1>
+        <h1 className="gradient-text text-3xl font-bold tracking-tight">Meetings</h1>
         <Link to="/meetings/new" className="btn-primary">
           New meeting
         </Link>

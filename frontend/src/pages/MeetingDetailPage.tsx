@@ -102,7 +102,7 @@ export function MeetingDetailPage() {
       </Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{meeting.title}</h1>
+          <h1 className="gradient-text text-3xl font-bold tracking-tight">{meeting.title}</h1>
           <p className="mt-1 text-sm text-muted">
             {new Date(meeting.recorded_at).toLocaleString()} · {formatClock(meeting.duration_seconds * 1000)} ·{" "}
             {meetingLanguageName(meeting.spoken_language)}

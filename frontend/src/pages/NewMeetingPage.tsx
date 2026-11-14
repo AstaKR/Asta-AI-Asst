@@ -25,7 +25,7 @@ export function NewMeetingPage() {
   const active = TABS.find((t) => t.key === tab)!;
   return (
     <Layout>
-      <h1 className="text-2xl font-semibold tracking-tight">New meeting</h1>
+      <h1 className="gradient-text text-3xl font-bold tracking-tight">New meeting</h1>
       <div className="mt-6 grid grid-cols-3 rounded-xl bg-subtle p-1 text-sm font-medium" role="tablist">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className={`rounded-lg py-2 ${tab === t.key ? "bg-surface shadow-sm" : "text-muted"}`}>

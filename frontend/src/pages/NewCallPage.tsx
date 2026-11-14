@@ -35,7 +35,7 @@ export function NewCallPage() {
   return (
     <Layout>
       <p className="text-sm font-medium text-brand">New call · Step 1 of 2</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">Choose your language</h1>
+      <h1 className="gradient-text mt-1 text-3xl font-bold tracking-tight">Choose your language</h1>
       <div className="card mt-6 space-y-6 p-6">
         {error && <ErrorBanner message={error} />}
         <LanguagePicker value={sel} onChange={setSel} />

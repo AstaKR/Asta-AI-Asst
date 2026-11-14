@@ -1,41 +1,60 @@
 @import "tailwindcss";
 
-/* Light and dark themes switch these variables; dark follows the OS unless the user picks a theme
-   (html[data-theme]). Components use only these tokens, never raw slate/white colours. */
+/* "Neural HUD" design system: deep-space canvas, aurora light, holographic glass panels with gradient hairlines,
+   neon actions and mono-type readouts. Dark is the default; light (html[data-theme="light"]) is an opt-in variant.
+   Components use only these tokens and utilities, never raw colours. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   --font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, -apple-system, "Nirmala UI",
     "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
-  /* Dark-first "aurora glass" theme. Light is the opt-in variant (html[data-theme="light"]). */
-  --color-ink: #eef1fb;
-  --color-muted: #a3adc7;
-  --color-line: rgb(255 255 255 / 0.10);
-  --color-surface: rgb(255 255 255 / 0.06);
-  --color-subtle: rgb(255 255 255 / 0.08);
-  --color-canvas: #070b1a;
-  --color-brand: #8b7cff;
-  --color-brand-strong: #7566f5;
-  --color-brand-soft: rgb(139 124 255 / 0.16);
-  --color-accent: #35e0c0;
-  --color-accent-soft: rgb(53 224 192 / 0.14);
-  --color-danger: #ff7a85;
-  --color-danger-soft: rgb(255 122 133 / 0.14);
+  --font-mono: "Cascadia Code", "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  --color-ink: #eaf0ff;
+  --color-muted: #9aa6c6;
+  --color-line: rgb(150 170 255 / 0.14);
+  --color-surface: rgb(14 18 40 / 0.55);
+  --color-subtle: rgb(130 150 255 / 0.09);
+  --color-canvas: #04050e;
+  --color-brand: #8a7bff;
+  --color-brand-strong: #7061f5;
+  --color-brand-soft: rgb(138 123 255 / 0.17);
+  --color-neon: #27e3ff;
+  --color-neon-soft: rgb(39 227 255 / 0.14);
+  --color-pink: #ff5fb8;
+  --color-accent: #3df2c4;
+  --color-accent-soft: rgb(61 242 196 / 0.14);
+  --color-danger: #ff7a8a;
+  --color-danger-soft: rgb(255 122 138 / 0.14);
   --color-warn: #ffc467;
   --color-warn-soft: rgb(255 196 103 / 0.14);
   --color-viz-1: #3987e5;
   --color-viz-2: #d95926;
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 12px 40px rgb(0 0 0 / 0.35);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.07) inset, 0 18px 50px -12px rgb(0 0 0 / 0.6);
+  --shadow-glow: 0 0 0 1px rgb(138 123 255 / 0.35), 0 10px 40px -8px rgb(138 123 255 / 0.55), 0 0 60px -10px rgb(39 227 255 / 0.35);
+
   --animate-float: float 14s ease-in-out infinite;
-  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-pulse-ring: pulse-ring 1.8s ease-out infinite;
+  --animate-spin-slow: spin 28s linear infinite;
+  --animate-spin-slower: spin 46s linear infinite reverse;
+  --animate-wave: wave 1.3s ease-in-out infinite;
+  --animate-blink: blink 1s steps(2, start) infinite;
+  --animate-drift: drift 22s ease-in-out infinite alternate;
+  --animate-scan: scan 7s linear infinite;
+  --animate-pop: pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+
   @keyframes float {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
     50% { transform: translate3d(3%, -4%, 0) scale(1.08); }
   }
   @keyframes rise {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
     to { opacity: 1; transform: none; }
   }
   @keyframes shimmer {
@@ -43,80 +62,188 @@
     to { background-position: 200% 0; }
   }
   @keyframes pulse-ring {
-    0% { box-shadow: 0 0 0 0 rgb(139 124 255 / 0.55); }
-    100% { box-shadow: 0 0 0 22px rgb(139 124 255 / 0); }
+    0% { box-shadow: 0 0 0 0 rgb(138 123 255 / 0.55); }
+    100% { box-shadow: 0 0 0 22px rgb(138 123 255 / 0); }
+  }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.25); }
+    50% { transform: scaleY(1); }
+  }
+  @keyframes blink {
+    to { opacity: 0; }
+  }
+  @keyframes drift {
+    from { transform: translate3d(-4%, -2%, 0) rotate(0deg); }
+    to { transform: translate3d(4%, 3%, 0) rotate(8deg); }
+  }
+  @keyframes scan {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(100vh); }
   }
 }
 
 @layer base {
   :root {
     color-scheme: dark;
+    --grid-line: rgb(140 160 255 / 0.07);
+    --aurora-1: rgb(124 92 255 / 0.34);
+    --aurora-2: rgb(34 211 238 / 0.22);
+    --aurora-3: rgb(236 72 153 / 0.18);
   }
   :root[data-theme="light"] {
     color-scheme: light;
-    --color-ink: #0b1220;
-    --color-muted: #5b6475;
-    --color-line: rgb(15 23 42 / 0.10);
-    --color-surface: rgb(255 255 255 / 0.72);
-    --color-subtle: rgb(15 23 42 / 0.05);
-    --color-canvas: #f3f4fb;
-    --color-brand: #5b4bf0;
-    --color-brand-strong: #4a3bd8;
-    --color-brand-soft: rgb(91 75 240 / 0.10);
+    --color-ink: #0a1024;
+    --color-muted: #566079;
+    --color-line: rgb(40 50 120 / 0.14);
+    --color-surface: rgb(255 255 255 / 0.74);
+    --color-subtle: rgb(60 70 160 / 0.06);
+    --color-canvas: #eef0fb;
+    --color-brand: #5a49ef;
+    --color-brand-strong: #4837d8;
+    --color-brand-soft: rgb(90 73 239 / 0.1);
+    --color-neon: #0891b2;
+    --color-neon-soft: rgb(8 145 178 / 0.1);
+    --color-pink: #c026d3;
     --color-accent: #0f766e;
-    --color-accent-soft: rgb(15 118 110 / 0.10);
+    --color-accent-soft: rgb(15 118 110 / 0.1);
     --color-danger: #c0262d;
     --color-danger-soft: rgb(192 38 45 / 0.08);
     --color-warn: #8a4b06;
-    --color-warn-soft: rgb(138 75 6 / 0.10);
-    --shadow-card: 0 1px 2px rgb(11 18 32 / 0.04), 0 10px 30px rgb(11 18 32 / 0.07);
+    --color-warn-soft: rgb(138 75 6 / 0.1);
+    --shadow-card: 0 1px 2px rgb(11 18 32 / 0.04), 0 14px 36px -10px rgb(30 40 120 / 0.18);
+    --shadow-glow: 0 0 0 1px rgb(90 73 239 / 0.3), 0 10px 30px -8px rgb(90 73 239 / 0.35);
+    --grid-line: rgb(40 50 120 / 0.06);
+    --aurora-1: rgb(124 92 255 / 0.2);
+    --aurora-2: rgb(34 211 238 / 0.16);
+    --aurora-3: rgb(236 72 153 / 0.1);
   }
 }
 
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  background:
-    radial-gradient(60rem 40rem at 12% -10%, rgb(124 92 255 / 0.28), transparent 60%),
-    radial-gradient(50rem 36rem at 95% 10%, rgb(34 211 238 / 0.16), transparent 60%),
-    radial-gradient(46rem 34rem at 50% 115%, rgb(236 72 153 / 0.14), transparent 60%),
-    var(--color-canvas);
-  background-attachment: fixed;
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* Living background: aurora light + a fading perspective grid. Fixed behind everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: -2;
+  background:
+    radial-gradient(48rem 34rem at 10% -5%, var(--aurora-1), transparent 62%),
+    radial-gradient(42rem 30rem at 100% 8%, var(--aurora-2), transparent 62%),
+    radial-gradient(40rem 30rem at 45% 110%, var(--aurora-3), transparent 62%);
+  animation: drift 26s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+
+::selection {
+  background: rgb(138 123 255 / 0.4);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--color-neon);
   outline-offset: 2px;
 }
 
+/* Holographic panel: glass body + a gradient hairline border drawn with a mask. */
 @utility card {
-  @apply rounded-3xl border border-line bg-surface shadow-(--shadow-card) backdrop-blur-xl animate-rise;
+  @apply relative rounded-3xl bg-surface shadow-(--shadow-card) backdrop-blur-md animate-rise;
+  border: 1px solid var(--color-line);
 }
+@utility glow-border {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgb(138 123 255 / 0.75), rgb(39 227 255 / 0.15) 40%, rgb(255 95 184 / 0.5));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+  }
+}
+/* Hover lift for clickable panels. */
+@utility card-hover {
+  @apply transition duration-300 hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-(--shadow-glow);
+}
+/* HUD corner brackets. */
+@utility hud {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    border-radius: 18px;
+    background:
+      linear-gradient(var(--color-neon), var(--color-neon)) top left / 14px 1.5px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) top left / 1.5px 14px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) top right / 14px 1.5px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) top right / 1.5px 14px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) bottom left / 14px 1.5px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) bottom left / 1.5px 14px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) bottom right / 14px 1.5px no-repeat,
+      linear-gradient(var(--color-neon), var(--color-neon)) bottom right / 1.5px 14px no-repeat;
+    opacity: 0.55;
+  }
+}
+
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-2.5 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-gradient-to-br from-brand to-[#22d3ee] text-[#07102a] shadow-[0_8px_24px_-6px_rgb(139_124_255/0.6)] hover:brightness-110 active:scale-[0.98];
+  @apply btn bg-gradient-to-br from-brand via-[#5aa0ff] to-neon text-[#050816] shadow-[0_10px_30px_-8px_rgb(138_123_255/0.75)] hover:-translate-y-px hover:brightness-110 hover:shadow-[0_14px_38px_-6px_rgb(39_227_255/0.55)] active:translate-y-0 active:scale-[0.98];
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.45) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+  }
+  &:hover:not(:disabled)::after {
+    transform: translateX(120%);
+  }
 }
 @utility btn-secondary {
-  @apply btn border border-line bg-surface text-ink hover:bg-subtle;
+  @apply btn border border-line bg-surface text-ink backdrop-blur hover:border-brand/60 hover:bg-brand-soft;
 }
 @utility btn-ghost {
   @apply btn text-muted hover:bg-subtle hover:text-ink;
 }
 @utility btn-danger {
-  @apply btn bg-danger text-white hover:opacity-90;
+  @apply btn bg-danger text-[#12040a] hover:brightness-110;
 }
 @utility field {
-  @apply w-full rounded-2xl border border-line bg-subtle px-3.5 py-2.5 text-sm text-ink shadow-sm outline-none placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/20;
+  @apply w-full rounded-2xl border border-line bg-subtle px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted focus:border-neon focus:bg-neon-soft focus:shadow-[0_0_0_3px_rgb(39_227_255/0.16)];
 }
 @utility label {
   @apply mb-1.5 block text-sm font-medium text-ink;
@@ -125,14 +252,19 @@ body {
   @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
 }
 @utility eyebrow {
-  @apply text-xs font-semibold tracking-wide text-muted uppercase;
+  @apply font-mono text-[11px] font-semibold tracking-[0.18em] text-neon uppercase;
 }
-
+@utility mono-readout {
+  @apply font-mono tabular-nums tracking-tight;
+}
 @utility skeleton {
   @apply animate-shimmer rounded-xl bg-[linear-gradient(90deg,transparent,rgb(255_255_255/0.12),transparent)] bg-[length:200%_100%];
 }
 @utility gradient-text {
-  @apply bg-gradient-to-r from-brand via-[#22d3ee] to-[#f472b6] bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-[#b4a9ff] via-neon to-[#ff8fd0] bg-clip-text text-transparent;
+}
+@utility neon-text {
+  text-shadow: 0 0 24px rgb(39 227 255 / 0.5);
 }
 
 @media (prefers-reduced-motion: reduce) {

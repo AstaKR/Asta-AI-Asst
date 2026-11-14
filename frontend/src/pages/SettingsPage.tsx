@@ -47,7 +47,7 @@ export function SettingsPage() {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+      <h1 className="gradient-text text-3xl font-bold tracking-tight">Settings</h1>
       <PlanCard />
       <PhoneCard />
       <PasswordCard />
