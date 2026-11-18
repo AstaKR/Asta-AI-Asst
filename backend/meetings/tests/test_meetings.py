@@ -579,6 +579,53 @@ def test_recall_answers_from_own_meetings_and_drops_made_up_sources(monkeypatch)
     assert owner.post("/api/meetings/ask/", {"question": ""}, format="json").status_code == 400
 
 
+def _gemini_http(reply: dict, captured: dict):
+    import httpx
+
+    def handler(request):
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        part = {"text": json.dumps(reply)}
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [part]}, "finishReason": "STOP"}], "usageMetadata": {"promptTokenCount": 7, "candidatesTokenCount": 3, "thoughtsTokenCount": 2}})
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+@pytest.mark.django_db
+def test_recall_with_gemini(settings):
+    from meetings import recall
+
+    settings.SUMMARY_PROVIDER = "gemini"
+    settings.SUMMARY_MODEL = "gemini-2.5-flash"
+    meeting = make_transcribed_meeting(client_for("anand"))
+    captured: dict = {}
+    http = _gemini_http({"answer": "Ravi sends it.", "sources": [{"meeting": 1, "segment": 0}]}, captured)
+    result = recall.ask(meeting.owner, "Who sends the report?", http=http)
+    assert result["answer"] == "Ravi sends it." and result["sources"][0]["segment"] == 0
+    assert result["input_tokens"] == 7 and result["output_tokens"] == 5  # thinking tokens count as output
+    assert "gemini-2.5-flash:generateContent" in captured["url"]
+    assert captured["body"]["generationConfig"]["response_json_schema"]["required"] == ["answer", "sources"]
+    assert "[M1#0]" in captured["body"]["contents"][0]["parts"][0]["text"]
+
+
+@pytest.mark.django_db
+def test_gemini_summary_provider_returns_validated_notes(settings):
+    from meetings.summary import summaries_enabled
+    from meetings.summary.base import TranscriptLine
+    from meetings.summary.gemini_provider import GeminiSummaryProvider
+
+    settings.SUMMARY_PROVIDER = "gemini"
+    settings.SUMMARY_MODEL = "gemini-2.5-flash"
+    notes = {"summary": "Agreed the plan.", "key_points": [], "decisions": [{"text": "Ship Friday", "segments": [0]}], "action_items": [], "open_questions": []}
+    captured: dict = {}
+    provider = GeminiSummaryProvider(client=_gemini_http(notes, captured))
+    out = provider.summarize("Weekly", [TranscriptLine(0, 0, "Speaker 1", "Ship on Friday", "")], "en")
+    assert out.decisions[0].text == "Ship Friday" and provider.output_tokens == 5
+    assert "English" in captured["body"]["system_instruction"]["parts"][0]["text"]
+    settings.GEMINI_API_KEY = ""
+    assert summaries_enabled() is False
+
+
 @pytest.mark.django_db
 def test_worker_segment_endpoint_requires_secret_and_consent():
     a, b = client_for("anand"), client_for("bharat")

@@ -18,8 +18,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 # name -> (label, settings attribute used as the .env fallback, expected prefix or "")
 PROVIDER_KEYS: dict[str, tuple[str, str, str]] = {
-    "anthropic_api_key": ("Anthropic (Claude) — assistant, photo translate, meeting notes", "ANTHROPIC_API_KEY", "sk-ant-"),
-    "gemini_api_key": ("Google Gemini — meeting transcripts with speaker labels", "GEMINI_API_KEY", ""),
+    "anthropic_api_key": ("Anthropic (Claude) — assistant and photo translate", "ANTHROPIC_API_KEY", "sk-ant-"),
+    "gemini_api_key": ("Google Gemini — meeting transcripts, notes and recall", "GEMINI_API_KEY", ""),
     "sarvam_api_key": ("Sarvam AI — speech recognition, translation, voice", "SARVAM_API_KEY", ""),
 }
 _CACHE_SECONDS = 30

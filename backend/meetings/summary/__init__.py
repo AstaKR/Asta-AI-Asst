@@ -5,10 +5,17 @@ from integrations import secrets
 from ..errors import ProviderNotConfigured
 from .base import SummaryProvider, TranscriptLine
 
+# Which API key each notes provider needs (notes, live notes and recall all follow SUMMARY_PROVIDER).
+PROVIDER_KEYS = {"gemini": "gemini_api_key", "anthropic": "anthropic_api_key"}
+
 
 def get_summarizer() -> SummaryProvider:
-    """Providers live in this package; add e.g. an OpenAI provider here without touching callers."""
+    """Providers live in this package; add another one here without touching callers."""
     provider = settings.SUMMARY_PROVIDER
+    if provider == "gemini":
+        from .gemini_provider import GeminiSummaryProvider
+
+        return GeminiSummaryProvider()
     if provider == "anthropic":
         from .anthropic_provider import AnthropicSummaryProvider
 
@@ -19,7 +26,8 @@ def get_summarizer() -> SummaryProvider:
 
 
 def summaries_enabled() -> bool:
-    return settings.SUMMARY_PROVIDER == "anthropic" and bool(secrets.get("anthropic_api_key"))
+    key = PROVIDER_KEYS.get(settings.SUMMARY_PROVIDER)
+    return bool(key and secrets.get(key))
 
 
-__all__ = ["SummaryProvider", "TranscriptLine", "get_summarizer", "summaries_enabled"]
+__all__ = ["PROVIDER_KEYS", "SummaryProvider", "TranscriptLine", "get_summarizer", "summaries_enabled"]

@@ -115,7 +115,7 @@ def test_overview_costs_and_counts():
     assert len(body["days"]) == 7
     today = body["days"][-1]
     # 1 h STT (₹30) + 10k translate (₹20) + 10k TTS (₹30) = ₹80; 1M Claude input tokens = $4 × 88 = ₹352
-    assert today["cost_inr"] == {"sarvam": 80.0, "claude": 352.0, "total": 432.0}
+    assert today["cost_inr"] == {"sarvam": 80.0, "claude": 352.0, "gemini": 0.0, "total": 432.0}
     assert today["quick_translations"] == 1 and today["assistant_requests"] == 1 and today["stt_minutes"] == 60.0
     assert body["period_cost_inr"] == 432.0 and body["today"]["users_total"] == 1
 
@@ -128,8 +128,10 @@ def test_overview_counts_claude_meeting_notes_only_when_anthropic():
     base = dict(owner=admin, title="m", source="upload", consent_confirmed_at=timezone.now(), recorded_at=timezone.now(), summary_generated_at=timezone.now())
     Meeting.objects.create(summary_model="anthropic:claude-test", summary_input_tokens=1_000_000, summary_output_tokens=0, **base)
     Meeting.objects.create(summary_model="none:test", summary_input_tokens=5_000_000, summary_output_tokens=0, **base)
+    Meeting.objects.create(summary_model="gemini:gemini-2.5-flash", summary_input_tokens=1_000_000, summary_output_tokens=1_000_000, **base)
     today = c.get("/api/admin/overview/?days=7").json()["days"][-1]
     assert today["cost_inr"]["claude"] == 352.0  # only the Claude notes: 1M input tokens = $4 x 88
+    assert today["cost_inr"]["gemini"] == 246.4  # Gemini notes: ($0.30 + $2.50) x 88
 
 
 @pytest.mark.django_db

@@ -37,7 +37,7 @@ Upload / Record ──► POST /api/meetings/ ──► file saved privately (ME
                                                                                     │
                    manage.py process_meetings (DB-backed job runner, no Redis) ◄────┘
                      1. playback MP3   2. decode → 16 kHz → split at pauses   3. STT per piece (Sarvam REST)
-                     4. translate per segment   5. (optional) Claude notes
+                     4. translate per segment   5. (optional) AI notes (Gemini or Claude)
 
 Live translate ──► POST /api/meetings/live/ → CallRoom(mode=meeting) → LiveKit token → worker joins
                      worker: STT → (translate) → (TTS to you) ──► POST /api/internal/meeting-segments/
@@ -47,7 +47,8 @@ Live translate ──► POST /api/meetings/live/ → CallRoom(mode=meeting) →
 - **Why a job runner:** transcription takes minutes, so it can't run inside a web request; the existing stack has
   no queue, and a DB-backed runner (atomic claim, retries for transient errors, stale-job recovery) avoids adding
   Redis/Celery. Several runners can run in parallel safely.
-- **Provider interfaces:** `meetings/transcription/` (Sarvam) and `meetings/summary/` (Claude).
+- **Provider interfaces:** `meetings/transcription/` (Gemini, Sarvam) and `meetings/summary/` (Gemini, Claude;
+  `SUMMARY_PROVIDER`, which recall follows too). Shared Gemini REST call: `meetings/gemini_client.py`.
   Adding another provider (e.g. OpenAI) means one new module plus one line in `get_summarizer()`.
 - **Language codes:** meetings use `ta`, `en`, `hi`; providers get BCP-47 (`ta-IN`, …) via `meetings/languages.py`.
 
@@ -67,8 +68,10 @@ validated with Pydantic before saving.
 | Speed | Paced at ~1 request/s (60/min plan limit): ~1 min of processing per ~1 min of speech |
 | Cost | ₹30 per hour of audio (silence is not billed) + ₹20 per 10K translated chars |
 
-Claude notes (`claude-opus-5-5`, $4 / $20 per million input/output tokens): about 15K input + 2K output tokens for an
-hour-long meeting ≈ **$0.10 (≈ ₹8–9)**. Disabled when `ANTHROPIC_API_KEY` is empty.
+Notes default to Gemini (`SUMMARY_PROVIDER=gemini`, `gemini-2.5-flash`, $0.30 / $2.50 per million input/output
+tokens, thinking billed as output). With live notes refreshed every ~90 s (about 40 calls an hour) an hour-long
+meeting costs roughly **₹30** for notes. `SUMMARY_PROVIDER=anthropic` uses Claude (`claude-opus-5-5`, $4 / $20),
+roughly ₹220 for the same hour. Disabled when the chosen provider's key is empty.
 
 Measured (real Sarvam, 26 Oct 2026, `scripts/integration_meeting_test.py`): a 7.5 s Tamil + Hindi upload produced two
 correctly transcribed and translated segments with the right offsets; 5.8 s billed. Live meeting: the Tamil sentence
@@ -78,13 +81,14 @@ was transcribed + translated live and stored at the correct offset.
 
 `MEETING_MAX_UPLOAD_MB`, `MEETING_MAX_DURATION_SECONDS`, daily AI budget shared with calls (`DAILY_STT_SECONDS_LIMIT`,
 `DAILY_TRANSLATE_CHARS_LIMIT` — meeting usage now counts toward them),
-`SUMMARY_PROVIDER=none` or empty `ANTHROPIC_API_KEY` (no summary cost), `TRANSLATION_ENABLED=false` (no live AI).
+`SUMMARY_PROVIDER=none` or an empty key for the chosen provider (no summary cost), `TRANSLATION_ENABLED=false` (no live AI).
 
 ## Privacy
 
 - Saved only after explicit consent (checkbox; both people for calls). Kept until the owner deletes the meeting
   (deleting removes the audio files too). Files live outside any static/public folder and are streamed only to their owner.
-- Audio and text are sent to Sarvam AI (speech, translation); transcripts to Anthropic only when notes are generated.
+- Audio and text are sent to Sarvam AI (speech, translation); meeting audio and transcripts to Google (Gemini) for speaker labels, notes and recall (Anthropic instead when
+  `SUMMARY_PROVIDER=anthropic`).
 - Logs never contain transcript text.
 
 ## API
@@ -114,7 +118,7 @@ LiveKit is used for calls only. A **Live meeting** is one phone or laptop record
   **Gemini** (`MEETING_STT_ENGINE=gemini`, key `GEMINI_API_KEY` or Admin → API keys). Lines come back labelled
   `Speaker 1`, `Speaker 2`...; the last lines of the previous chunk are passed along so labels stay steady. Rename a
   speaker by editing a segment.
-- **Live notes**: `POST /api/meetings/{id}/live-notes/` refreshes the Claude notes from what has been said so far
+- **Live notes**: `POST /api/meetings/{id}/live-notes/` refreshes the AI notes (Gemini by default) from what has been said so far
   (the apps call it about every 90 s).
 - **End meeting**: `POST /api/meetings/{id}/finish/` joins the chunks into one MP3 for playback and queues the final notes.
 - **Recall**: `POST /api/meetings/ask/ {"question": "..."}` answers from the user's own meetings (notes, action items and
@@ -122,3 +126,5 @@ LiveKit is used for calls only. A **Live meeting** is one phone or laptop record
 - Gemini's speaker labels are best-effort (Google marks 3+ speakers as experimental). Test with a real Tamil/Hindi
   recording before relying on it. Set `MEETING_STT_ENGINE=sarvam` to go back to Sarvam (no speaker labels).
 - Gemini speech-to-text is not counted against the Sarvam daily budget; Gemini and Claude usage is billed by those providers.
+- Google's pricing page says `gemini-2.5-flash` requests are routed to Gemini 3.5 Flash-Lite from 1 Dec 2026. To
+  choose the model yourself, set `MEETING_GEMINI_MODEL` and `SUMMARY_MODEL`, then re-test transcripts and notes.

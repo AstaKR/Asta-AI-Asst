@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import base64
 import io
-import json
 import logging
 import re
-import time
 
 import av
 import httpx
@@ -22,18 +20,11 @@ from django.conf import settings
 
 from integrations import secrets
 
-from ..errors import (
-    ProviderAuthError,
-    ProviderError,
-    ProviderNotConfigured,
-    ProviderRateLimited,
-    ProviderRequestError,
-    ProviderUnavailable,
-)
+from ..errors import ProviderNotConfigured
+from ..gemini_client import generate_json
 from .base import ProgressCallback, Segment, Transcriber
 
 log = logging.getLogger(__name__)
-API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 LANGS = {"ta": "Tamil", "hi": "Hindi", "en": "English"}
 
 SCHEMA = {
@@ -138,45 +129,15 @@ class GeminiTranscriber(Transcriber):
 
     def _generate(self, mp3: bytes, context: str, language: str | None) -> list[dict]:
         hint = f"\nThe main spoken language is {LANGS[language]}." if language in LANGS else ""
-        body = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": PROMPT.format(context=hint + context)},
-                        {"inline_data": {"mime_type": "audio/mp3", "data": base64.b64encode(mp3).decode()}},
-                    ]
-                }
-            ],
-            "generationConfig": {"temperature": 0, "response_mime_type": "application/json", "response_schema": SCHEMA},
-        }
-        url = f"{API_BASE}/models/{self.model}:generateContent"
-        error: ProviderError | None = None
-        for attempt in range(3):
-            try:
-                resp = self.http.post(url, headers={"x-goog-api-key": self.key}, json=body)
-            except httpx.TimeoutException:
-                error = ProviderUnavailable("Gemini timed out.")
-            except httpx.HTTPError as exc:
-                error = ProviderUnavailable(f"Could not reach Gemini ({exc.__class__.__name__}).")
-            else:
-                if resp.status_code < 400:
-                    data = resp.json()
-                    usage = data.get("usageMetadata") or {}
-                    self.input_tokens += int(usage.get("promptTokenCount") or 0)
-                    self.output_tokens += int(usage.get("candidatesTokenCount") or 0)
-                    try:
-                        text = data["candidates"][0]["content"]["parts"][0]["text"]
-                        return json.loads(text).get("segments", [])
-                    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-                        raise ProviderRequestError("Gemini returned a transcript in an unexpected format.") from exc
-                if resp.status_code in (401, 403) or (resp.status_code == 400 and "API key" in resp.text):
-                    raise ProviderAuthError("The Gemini API key was rejected.")
-                if resp.status_code == 400:
-                    raise ProviderRequestError("Gemini rejected the audio (400).")
-                error = ProviderRateLimited("Gemini rate limit reached.") if resp.status_code == 429 else ProviderUnavailable(f"Gemini error ({resp.status_code}).")
-            if attempt < 2:
-                time.sleep(2 * 2**attempt)
-        raise error  # type: ignore[misc]
+        parts = [
+            {"text": PROMPT.format(context=hint + context)},
+            {"inline_data": {"mime_type": "audio/mp3", "data": base64.b64encode(mp3).decode()}},
+        ]
+        result = generate_json(self.http, self.key, self.model, parts, schema=SCHEMA, what="a transcript")
+        self.input_tokens += result.input_tokens
+        self.output_tokens += result.output_tokens
+        segments = result.data.get("segments", [])
+        return segments if isinstance(segments, list) else []
 
     def transcribe(self, pcm: bytes, rate: int, language: str | None, on_progress: ProgressCallback | None = None) -> list[Segment]:
         wins = windows(pcm, rate)

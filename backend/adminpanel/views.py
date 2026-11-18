@@ -26,7 +26,7 @@ from telephony.models import PhoneCall
 User = get_user_model()
 
 
-def estimate_inr(stt_seconds=0.0, translate_chars=0, tts_chars=0, input_tokens=0, output_tokens=0) -> dict:
+def estimate_inr(stt_seconds=0.0, translate_chars=0, tts_chars=0, input_tokens=0, output_tokens=0, gemini_input_tokens=0, gemini_output_tokens=0) -> dict:
     sarvam = (
         stt_seconds / 3600 * settings.COST_SARVAM_STT_INR_PER_HOUR
         + translate_chars / 10_000 * settings.COST_SARVAM_TRANSLATE_INR_PER_10K_CHARS
@@ -34,7 +34,9 @@ def estimate_inr(stt_seconds=0.0, translate_chars=0, tts_chars=0, input_tokens=0
     )
     claude_usd = input_tokens / 1e6 * settings.COST_CLAUDE_INPUT_USD_PER_MTOK + output_tokens / 1e6 * settings.COST_CLAUDE_OUTPUT_USD_PER_MTOK
     claude = claude_usd * settings.COST_USD_TO_INR
-    return {"sarvam": round(sarvam, 2), "claude": round(claude, 2), "total": round(sarvam + claude, 2)}
+    gemini_usd = gemini_input_tokens / 1e6 * settings.COST_GEMINI_INPUT_USD_PER_MTOK + gemini_output_tokens / 1e6 * settings.COST_GEMINI_OUTPUT_USD_PER_MTOK
+    gemini = gemini_usd * settings.COST_USD_TO_INR
+    return {"sarvam": round(sarvam, 2), "claude": round(claude, 2), "gemini": round(gemini, 2), "total": round(sarvam + claude + gemini, 2)}
 
 
 def _by_day(qs, date_field: str, **aggs) -> dict:
@@ -60,9 +62,15 @@ class OverviewView(APIView):
         rooms = _by_day(CallRoom.objects.filter(created_at__gte=since, started_at__isnull=False), "created_at", n=Count("id"))
         users = _by_day(User.objects.filter(date_joined__gte=since), "date_joined", n=Count("id"))
         phones = _by_day(PhoneCall.objects.filter(created_at__gte=since), "created_at", n=Count("id"))
-        # Claude meeting notes: tokens are stored on the meeting (only Claude notes are priced).
+        # Meeting notes: tokens are stored on the meeting, priced by the provider that wrote them.
         notes = _by_day(
             Meeting.objects.filter(summary_generated_at__gte=since, summary_model__startswith="anthropic:"),
+            "summary_generated_at",
+            i=Sum("summary_input_tokens"),
+            o=Sum("summary_output_tokens"),
+        )
+        gnotes = _by_day(
+            Meeting.objects.filter(summary_generated_at__gte=since, summary_model__startswith="gemini:"),
             "summary_generated_at",
             i=Sum("summary_input_tokens"),
             o=Sum("summary_output_tokens"),
@@ -87,7 +95,9 @@ class OverviewView(APIView):
                     "stt_minutes": round(stt / 60, 1),
                     "translate_chars": tr,
                     "tts_chars": tts,
-                    "cost_inr": estimate_inr(stt, tr, tts, g(claude, "i") + g(notes, "i"), g(claude, "o") + g(notes, "o")),
+                    "cost_inr": estimate_inr(
+                        stt, tr, tts, g(claude, "i") + g(notes, "i"), g(claude, "o") + g(notes, "o"), g(gnotes, "i"), g(gnotes, "o")
+                    ),
                 }
             )
 
@@ -118,6 +128,8 @@ class OverviewView(APIView):
                     "sarvam_tts_inr_per_10k": settings.COST_SARVAM_TTS_INR_PER_10K_CHARS,
                     "claude_input_usd_per_mtok": settings.COST_CLAUDE_INPUT_USD_PER_MTOK,
                     "claude_output_usd_per_mtok": settings.COST_CLAUDE_OUTPUT_USD_PER_MTOK,
+                    "gemini_input_usd_per_mtok": settings.COST_GEMINI_INPUT_USD_PER_MTOK,
+                    "gemini_output_usd_per_mtok": settings.COST_GEMINI_OUTPUT_USD_PER_MTOK,
                     "usd_to_inr": settings.COST_USD_TO_INR,
                 },
             }

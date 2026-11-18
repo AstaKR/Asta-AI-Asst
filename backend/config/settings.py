@@ -269,9 +269,9 @@ STT_ENGINE = env("STT_ENGINE", AI_ENGINE)
 TTS_ENGINE = env("TTS_ENGINE", AI_ENGINE)
 SARVAM_MIN_REQUEST_INTERVAL = float(env("SARVAM_MIN_REQUEST_INTERVAL", "1.05"))
 PROVIDER_TIMEOUT_SECONDS = float(env("PROVIDER_TIMEOUT_SECONDS", "30"))
-# AI summaries: anthropic | none. Uses ANTHROPIC_API_KEY (server-side only).
-SUMMARY_PROVIDER = env("SUMMARY_PROVIDER", "anthropic")
-SUMMARY_MODEL = env("SUMMARY_MODEL", "claude-opus-5-5")
+# Meeting notes, live notes and recall: gemini (GEMINI_API_KEY) | anthropic (ANTHROPIC_API_KEY) | none.
+SUMMARY_PROVIDER = env("SUMMARY_PROVIDER", "gemini")
+SUMMARY_MODEL = env("SUMMARY_MODEL", MEETING_GEMINI_MODEL if SUMMARY_PROVIDER == "gemini" else "claude-opus-5-5")
 SUMMARY_EFFORT = env("SUMMARY_EFFORT", "medium")
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "").strip()
 # Encrypts provider API keys saved from the admin page (Fernet key; generate with
@@ -288,6 +288,8 @@ COST_SARVAM_TRANSLATE_INR_PER_10K_CHARS = env_float("COST_SARVAM_TRANSLATE_INR_P
 COST_SARVAM_TTS_INR_PER_10K_CHARS = env_float("COST_SARVAM_TTS_INR_PER_10K_CHARS", 30.0)
 COST_CLAUDE_INPUT_USD_PER_MTOK = env_float("COST_CLAUDE_INPUT_USD_PER_MTOK", 4.0)  # Opus 5.5
 COST_CLAUDE_OUTPUT_USD_PER_MTOK = env_float("COST_CLAUDE_OUTPUT_USD_PER_MTOK", 20.0)
+COST_GEMINI_INPUT_USD_PER_MTOK = env_float("COST_GEMINI_INPUT_USD_PER_MTOK", 0.30)  # Gemini 2.5 Flash text input
+COST_GEMINI_OUTPUT_USD_PER_MTOK = env_float("COST_GEMINI_OUTPUT_USD_PER_MTOK", 2.50)  # includes thinking tokens
 COST_USD_TO_INR = env_float("COST_USD_TO_INR", 88.0)
 MEETING_AUTO_SUMMARY = env_bool("MEETING_AUTO_SUMMARY", False)
 

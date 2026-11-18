@@ -5,7 +5,9 @@ import type { OverviewDay } from "../../types";
 const SERIES = [
   { key: "sarvam", label: "Sarvam (speech + translation)", color: "var(--color-viz-1)" },
   { key: "claude", label: "Claude (assistant + photos)", color: "var(--color-viz-2)" },
+  { key: "gemini", label: "Gemini (meeting notes)", color: "var(--color-viz-3)" },
 ] as const;
+const SHORT = { sarvam: "Sarvam", claude: "Claude", gemini: "Gemini" } as const;
 
 const W = 720;
 const H = 240;
@@ -61,8 +63,11 @@ export function CostChart({ days }: { days: OverviewDay[] }) {
             <thead className="text-left text-xs text-muted">
               <tr>
                 <th className="py-2 font-medium">Day</th>
-                <th className="py-2 text-right font-medium">Sarvam</th>
-                <th className="py-2 text-right font-medium">Claude</th>
+                {SERIES.map((s) => (
+                  <th key={s.key} className="py-2 text-right font-medium">
+                    {SHORT[s.key]}
+                  </th>
+                ))}
                 <th className="py-2 text-right font-medium">Total</th>
               </tr>
             </thead>
@@ -70,8 +75,11 @@ export function CostChart({ days }: { days: OverviewDay[] }) {
               {days.map((d) => (
                 <tr key={d.date}>
                   <td className="py-2 text-ink">{dayLabel(d.date)}</td>
-                  <td className="py-2 text-right tabular-nums">{inr(d.cost_inr.sarvam)}</td>
-                  <td className="py-2 text-right tabular-nums">{inr(d.cost_inr.claude)}</td>
+                  {SERIES.map((s) => (
+                    <td key={s.key} className="py-2 text-right tabular-nums">
+                      {inr(d.cost_inr[s.key] ?? 0)}
+                    </td>
+                  ))}
                   <td className="py-2 text-right font-medium tabular-nums">{inr(d.cost_inr.total)}</td>
                 </tr>
               ))}
@@ -91,17 +99,28 @@ export function CostChart({ days }: { days: OverviewDay[] }) {
             ))}
             {days.map((d, i) => {
               const x = PAD.left + i * slot + (slot - barW) / 2;
-              const hs = y(d.cost_inr.sarvam);
-              const hc = y(d.cost_inr.claude);
-              const base = PAD.top + innerH;
-              const gap = hs > 0 && hc > 0 ? 2 : 0; // 2px surface gap between stacked segments
+              // Stacked segments bottom-up, 2px surface gap between them; only the top one gets rounded corners.
+              const parts = SERIES.map((s) => ({ color: s.color, h: y(d.cost_inr[s.key] ?? 0) })).filter((p) => p.h > 0);
+              let top = PAD.top + innerH;
+              const rects = parts.map((p, k) => {
+                top -= p.h + (k > 0 ? 2 : 0);
+                return { ...p, y: top, last: k === parts.length - 1 };
+              });
               return (
-                <g key={d.date} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} tabIndex={0}>
+                <g
+                  key={d.date}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover(null)}
+                  onFocus={() => setHover(i)}
+                  onBlur={() => setHover(null)}
+                  tabIndex={0}
+                >
                   {/* hit target larger than the mark */}
                   <rect x={PAD.left + i * slot} y={PAD.top} width={slot} height={innerH} fill="transparent" />
                   {hover === i && <rect x={PAD.left + i * slot} y={PAD.top} width={slot} height={innerH} fill="var(--color-subtle)" />}
-                  {hs > 0 && <rect x={x} y={base - hs} width={barW} height={hs} rx={hc > 0 ? 0 : 4} fill={SERIES[0].color} />}
-                  {hc > 0 && <rect x={x} y={base - hs - gap - hc} width={barW} height={hc} rx={4} fill={SERIES[1].color} />}
+                  {rects.map((r) => (
+                    <rect key={r.color} x={x} y={r.y} width={barW} height={r.h} rx={r.last ? 4 : 0} fill={r.color} />
+                  ))}
                   {i % labelEvery === 0 && (
                     <text x={x + barW / 2} y={H - 8} textAnchor="middle" fontSize={11} fill="var(--color-muted)">
                       {dayLabel(d.date)}
@@ -121,9 +140,9 @@ export function CostChart({ days }: { days: OverviewDay[] }) {
                 <p key={s.key} className="flex items-center justify-between gap-4 text-muted">
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-sm" style={{ background: s.color }} />
-                    {s.key === "sarvam" ? "Sarvam" : "Claude"}
+                    {SHORT[s.key]}
                   </span>
-                  <span className="text-ink tabular-nums">{inr(days[hover].cost_inr[s.key])}</span>
+                  <span className="text-ink tabular-nums">{inr(days[hover].cost_inr[s.key] ?? 0)}</span>
                 </p>
               ))}
               <p className="mt-1.5 flex justify-between border-t border-line pt-1.5 font-medium text-ink">

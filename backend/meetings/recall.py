@@ -1,7 +1,8 @@
 """Recall: answer a question from the user's own past meetings, with the meeting and moment it came from.
 
 Retrieval is plain database search (no embeddings service): the notes and open action items of the most recent
-meetings, plus transcript lines that contain words from the question. Claude answers only from that context and
+meetings, plus transcript lines that contain words from the question. The notes model (Gemini or Claude, per
+SUMMARY_PROVIDER) answers only from that context and
 must cite meeting numbers and segment numbers; citations that do not exist are dropped.
 """
 
@@ -11,6 +12,7 @@ import json
 import re
 
 import anthropic
+import httpx
 from django.conf import settings
 from django.db.models import Q
 
@@ -18,6 +20,7 @@ from integrations import secrets
 
 from .claude_errors import anthropic_errors
 from .errors import ProviderNotConfigured, ProviderRequestError
+from .gemini_client import gemini_key, generate_json
 from .models import Meeting, TranscriptSegment
 
 MAX_MEETINGS = 25
@@ -40,7 +43,7 @@ SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
-                "properties": {"meeting": {"type": "integer"}, "segment": {"type": ["integer", "null"]}},
+                "properties": {"meeting": {"type": "integer"}, "segment": {"anyOf": [{"type": "integer"}, {"type": "null"}]}},
                 "required": ["meeting", "segment"],
                 "additionalProperties": False,
             },
@@ -82,13 +85,7 @@ def build_context(user, question: str) -> tuple[str, dict[int, Meeting]]:
     return "\n".join(parts), numbered
 
 
-def ask(user, question: str, *, client: anthropic.Anthropic | None = None) -> dict:
-    question = question.strip()
-    if not question:
-        raise ProviderRequestError("Ask a question.")
-    context, numbered = build_context(user, question)
-    if not numbered:
-        return {"answer": "There are no meetings to search yet.", "sources": [], "input_tokens": 0, "output_tokens": 0}
+def _ask_claude(prompt: str, client: anthropic.Anthropic | None) -> tuple[dict, int, int]:
     key = secrets.get("anthropic_api_key") if client is None else ""
     if client is None and not key:
         raise ProviderNotConfigured("The Anthropic API key is not set (admin page or ANTHROPIC_API_KEY).")
@@ -100,16 +97,44 @@ def ask(user, question: str, *, client: anthropic.Anthropic | None = None) -> di
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
             system=SYSTEM,
-            messages=[{"role": "user", "content": f"{context}\n\nQuestion: {question}"}],
+            messages=[{"role": "user", "content": prompt}],
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
         )
     if response.stop_reason in ("refusal", "max_tokens"):
         raise ProviderRequestError("The AI could not answer that.")
     try:
         data = json.loads("".join(b.text for b in response.content if b.type == "text"))
+    except json.JSONDecodeError as exc:
+        raise ProviderRequestError("The AI returned an answer in an unexpected format.") from exc
+    usage = getattr(response, "usage", None)
+    return data, int(getattr(usage, "input_tokens", 0) or 0), int(getattr(usage, "output_tokens", 0) or 0)
+
+
+def _ask_gemini(prompt: str, http: httpx.Client | None) -> tuple[dict, int, int]:
+    key = gemini_key() if http is None else "injected-client"
+    result = generate_json(
+        http or httpx.Client(timeout=120.0), key, settings.SUMMARY_MODEL, [{"text": prompt}], json_schema=SCHEMA, system=SYSTEM, what="an answer"
+    )
+    return result.data, result.input_tokens, result.output_tokens
+
+
+def ask(user, question: str, *, client: anthropic.Anthropic | None = None, http: httpx.Client | None = None) -> dict:
+    """Uses the notes provider (SUMMARY_PROVIDER). `client` / `http` are injected by tests."""
+    question = question.strip()
+    if not question:
+        raise ProviderRequestError("Ask a question.")
+    context, numbered = build_context(user, question)
+    if not numbered:
+        return {"answer": "There are no meetings to search yet.", "sources": [], "input_tokens": 0, "output_tokens": 0}
+    prompt = f"{context}\n\nQuestion: {question}"
+    if settings.SUMMARY_PROVIDER == "gemini" and client is None:
+        data, tokens_in, tokens_out = _ask_gemini(prompt, http)
+    else:
+        data, tokens_in, tokens_out = _ask_claude(prompt, client)
+    try:
         answer = str(data["answer"]).strip()
         raw_sources = data["sources"]
-    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+    except (KeyError, TypeError) as exc:
         raise ProviderRequestError("The AI returned an answer in an unexpected format.") from exc
     sources, seen = [], set()
     for s in raw_sources:
@@ -129,10 +154,4 @@ def ask(user, question: str, *, client: anthropic.Anthropic | None = None) -> di
             continue
         seen.add(key2)
         sources.append({"meeting_id": str(meeting.id), "title": meeting.title, "recorded_at": meeting.recorded_at.isoformat(), "segment": seg, "start_ms": start_ms})
-    usage = getattr(response, "usage", None)
-    return {
-        "answer": answer,
-        "sources": sources,
-        "input_tokens": int(getattr(usage, "input_tokens", 0) or 0),
-        "output_tokens": int(getattr(usage, "output_tokens", 0) or 0),
-    }
+    return {"answer": answer, "sources": sources, "input_tokens": tokens_in, "output_tokens": tokens_out}

@@ -241,6 +241,7 @@ export interface MyPlan {
 export interface CostSplit {
   sarvam: number;
   claude: number;
+  gemini: number;
   total: number;
 }
 
