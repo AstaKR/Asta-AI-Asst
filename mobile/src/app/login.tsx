@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text } from "rea
 
 import { ApiError, api } from "../api";
 import { useAuth } from "../auth";
+import { getApiUrl } from "../config";
 import { Banner, Button, Card, Field, colors, Muted, Screen, Title } from "../components/ui";
 
 type Mode = "login" | "register" | "reset";
@@ -141,6 +142,11 @@ export default function Login() {
               </Pressable>
             </Card>
           )}
+          <Pressable onPress={() => router.push("/server")} style={{ marginTop: 18, alignItems: "center" }} accessibilityRole="button">
+            <Text style={{ color: colors.muted, fontSize: 13 }}>
+              Server: {getApiUrl().replace(/^https?:\/\//, "")} · <Text style={{ color: colors.brand }}>Change</Text>
+            </Text>
+          </Pressable>
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>

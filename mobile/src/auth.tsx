@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApiError, api, setAuthToken } from "./api";
+import { getApiUrl, loadServerUrl, saveServerUrl } from "./config";
 import type { User } from "./types";
 
 const TOKEN_KEY = "api_token";
@@ -12,6 +13,8 @@ interface AuthValue {
   signIn: (token: string, user: User) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Switches to another server (null = the built-in one). Accounts belong to a server, so this signs out. */
+  changeServer: (url: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -41,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
+      await loadServerUrl();
       // The API token lives in the OS keystore (Android Keystore / iOS Keychain), not plain storage.
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
@@ -57,7 +61,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, signIn, signOut, refresh }), [user, loading, signIn, signOut, refresh]);
+  const changeServer = useCallback(
+    async (url: string | null) => {
+      if (url === getApiUrl()) return;
+      if (user) await signOut();
+      else {
+        setAuthToken(null);
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      }
+      await saveServerUrl(url);
+    },
+    [user, signOut],
+  );
+
+  const value = useMemo(
+    () => ({ user, loading, signIn, signOut, refresh, changeServer }),
+    [user, loading, signIn, signOut, refresh, changeServer],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

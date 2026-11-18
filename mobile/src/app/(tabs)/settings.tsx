@@ -6,7 +6,8 @@ import { ApiError, api, type LanguageSelection } from "../../api";
 import { useAuth } from "../../auth";
 import { LanguagePicker } from "../../components/LanguagePicker";
 import { PlanCard } from "../../components/PlanCard";
-import { Banner, Button, Card, Field, Muted, Screen, colors, styles } from "../../components/ui";
+import { Banner, Button, Card, Field, ListItem, Muted, Screen, colors, styles } from "../../components/ui";
+import { getApiUrl } from "../../config";
 import type { UsageSummary } from "../../types";
 
 const VOLUMES = [0, 15, 30, 60];
@@ -198,6 +199,15 @@ export default function Settings() {
             </Muted>
           </Card>
         )}
+        <Card>
+          <ListItem
+            icon="server-outline"
+            title="Server settings"
+            subtitle={getApiUrl().replace(/^https?:\/\//, "")}
+            onPress={() => router.push("/server")}
+            last
+          />
+        </Card>
         <Button
           label="Sign out"
           variant="secondary"

@@ -16,7 +16,11 @@
           "audio",
           "voip"
         ],
-        "NSCameraUsageDescription": "The camera is used in video calls so the other person can see you."
+        "NSCameraUsageDescription": "The camera is used in video calls so the other person can see you.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "Used to connect to your company's translator server on the office Wi-Fi."
       },
       "bitcode": false
     },

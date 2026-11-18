@@ -1,4 +1,4 @@
-import { API_URL } from "./config";
+import { getApiUrl } from "./config";
 import type {
   MeetingActionItem,
   MeetingAnswer,
@@ -63,9 +63,9 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
   if (authToken) headers.Authorization = `Token ${authToken}`;
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api${path}`, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+    res = await fetch(`${getApiUrl()}/api${path}`, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
   } catch {
-    throw new ApiError(0, "Cannot reach the server. Check your internet connection.");
+    throw new ApiError(0, "Cannot reach the server. Check your internet connection, or the server address under Server settings.", "unreachable");
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
@@ -146,7 +146,7 @@ function uploadWithProgress<T>(
     // React Native's FormData streams the file from its local URI.
     form.append(fileField, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_URL}/api${path}`);
+    xhr.open("POST", `${getApiUrl()}/api${path}`);
     xhr.setRequestHeader("Accept", "application/json");
     if (authToken) xhr.setRequestHeader("Authorization", `Token ${authToken}`);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
@@ -194,8 +194,8 @@ export const meetingsApi = {
   liveNotes: (id: string) => request<MeetingDetail>(`/meetings/${id}/live-notes/`, "POST"),
   finishLive: (id: string) => request<MeetingDetail>(`/meetings/${id}/finish/`, "POST"),
   ask: (question: string) => request<MeetingAnswer>("/meetings/ask/", "POST", { question }),
-  audioUrl: (id: string) => `${API_URL}/api/meetings/${id}/audio/`,
-  exportUrl: (id: string, kind: ExportKind) => `${API_URL}/api/meetings/${id}/export/?kind=${kind}`,
+  audioUrl: (id: string) => `${getApiUrl()}/api/meetings/${id}/audio/`,
+  exportUrl: (id: string, kind: ExportKind) => `${getApiUrl()}/api/meetings/${id}/export/?kind=${kind}`,
 };
 
 export function isMemberView(room: Room | RoomPreview): room is Room {

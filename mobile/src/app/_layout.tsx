@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ title: "Sign in" }} />
+        <Stack.Screen name="server" options={{ title: "Server settings" }} />
         <Stack.Screen name="forwarding" options={{ title: "Translate my phone calls" }} />
         <Stack.Screen name="call/[code]" options={{ title: "Call", headerBackVisible: false, gestureEnabled: false }} />
         <Stack.Screen name="summary/[code]" options={{ title: "Call summary", headerBackVisible: false }} />
