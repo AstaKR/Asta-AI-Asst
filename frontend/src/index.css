@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./warm.css";
 
 /* "Neural HUD" design system: deep-space canvas, aurora light, holographic glass panels with gradient hairlines,
    neon actions and mono-type readouts. Dark is the default; light (html[data-theme="light"]) is an opt-in variant.

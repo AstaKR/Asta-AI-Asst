@@ -3,8 +3,9 @@ import { Navigate, useSearchParams } from "react-router-dom";
 
 import { ApiError, api } from "../api";
 import { useAuth } from "../auth";
-import { ErrorBanner, Layout } from "../components/Layout";
-import { VoiceOrb } from "../components/VoiceOrb";
+import { ErrorBanner } from "../components/Layout";
+import { Stage } from "../components/warm/Stage";
+import { WarmShell } from "../components/warm/WarmShell";
 
 function safeNext(next: string | null): string {
   // Only allow in-app relative paths (prevents open redirects).
@@ -46,33 +47,34 @@ export function LoginPage() {
   }
 
   return (
-    <Layout wide>
-      <div className="grid items-center gap-10 lg:grid-cols-2">
+    <WarmShell nav={false}>
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:py-16">
         <div className="hidden lg:block">
-          <p className="eyebrow">// secure access</p>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight">
-            Talk across <span className="gradient-text neon-text">languages</span>, instantly.
-          </h2>
-          <p className="mt-4 max-w-md text-muted">Sign in to start a call, translate on the spot or turn a meeting into a transcript with notes.</p>
-          <VoiceOrb className="mt-4 max-w-[340px]" />
+          <p className="wm-eyebrow text-chilli-text">Welcome</p>
+          <h2 className="wm-display mt-3 text-[clamp(2.6rem,4.4vw,3.9rem)]">Pull up a chair. Let&rsquo;s talk.</h2>
+          <p className="mt-5 max-w-md text-[1.1rem] text-muted">Sign in to start a call, translate on the spot or turn a meeting into a transcript with notes.</p>
+          <div className="mt-10">
+            <Stage />
+          </div>
         </div>
       <div className="mx-auto w-full max-w-md">
-        <h1 className="gradient-text text-3xl font-bold tracking-tight">
+        <h1 className="wm-title text-[clamp(2.1rem,6vw,2.7rem)]">
           {mode === "login" ? "Sign in" : mode === "register" ? "Create your account" : "Reset your password"}
         </h1>
-        <p className="mt-1 text-sm text-muted">Both people on a call need an account.</p>
-        {notice && <p className="mt-4 rounded-xl bg-subtle p-3 text-sm text-accent">{notice}</p>}
+        <p className="mt-2 text-muted">Both people on a call need an account.</p>
+        {notice && <p role="status" className="mt-4 rounded-2xl border-[2.5px] border-chai bg-butter p-3 text-[0.95rem] font-medium">{notice}</p>}
         {mode !== "reset" && (
-          <div className="mt-6 grid grid-cols-2 rounded-xl bg-subtle p-1 text-sm font-medium">
+          <div className="mt-6 grid grid-cols-2 gap-1 rounded-full border-[2.5px] border-chai bg-paper-2 p-1 font-bold">
             {(["login", "register"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
+                aria-pressed={mode === m}
                 onClick={() => {
                   setMode(m);
                   setNotice("");
                 }}
-                className={`rounded-lg py-2 ${mode === m ? "bg-surface shadow-sm" : "text-muted"}`}
+                className={`min-h-11 rounded-full py-2 transition ${mode === m ? "border-2 border-chai bg-saffron shadow-[2px_2px_0_var(--color-chai)]" : "border-2 border-transparent text-muted hover:text-chai"}`}
               >
                 {m === "login" ? "Sign in" : "Register"}
               </button>
@@ -88,22 +90,22 @@ export function LoginPage() {
             }}
           />
         )}
-        <form onSubmit={submit} className={`card mt-4 space-y-4 p-6 ${mode === "reset" ? "hidden" : ""}`}>
+        <form onSubmit={submit} className={`wm-card mt-5 space-y-4 p-6 ${mode === "reset" ? "hidden" : ""}`}>
           {error && <ErrorBanner message={error} />}
           <label className="block">
-            <span className="label">Username</span>
-            <input className="field" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <span className="wm-label">Username</span>
+            <input className="wm-field" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
           </label>
           {mode === "register" && (
             <label className="block">
-              <span className="label">Name shown on calls</span>
-              <input className="field" value={displayName} maxLength={60} onChange={(e) => setDisplayName(e.target.value)} />
+              <span className="wm-label">Name shown on calls</span>
+              <input className="wm-field" value={displayName} maxLength={60} onChange={(e) => setDisplayName(e.target.value)} />
             </label>
           )}
           <label className="block">
-            <span className="label">Password</span>
+            <span className="wm-label">Password</span>
             <input
-              className="field"
+              className="wm-field"
               type="password"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
@@ -112,18 +114,18 @@ export function LoginPage() {
               required
             />
           </label>
-          <button className="btn-primary w-full" disabled={busy}>
+          <button className="wm-btn w-full" disabled={busy}>
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
           {mode === "login" && (
-            <button type="button" className="w-full text-sm text-muted underline" onClick={() => setMode("reset")}>
+            <button type="button" className="min-h-11 w-full text-[0.95rem] font-semibold text-muted underline underline-offset-4 hover:text-chai" onClick={() => setMode("reset")}>
               Forgot password?
             </button>
           )}
         </form>
       </div>
       </div>
-    </Layout>
+    </WarmShell>
   );
 }
 
@@ -148,7 +150,7 @@ function ResetPasswordForm({ onBack, onDone }: { onBack: () => void; onDone: () 
   }
 
   return (
-    <div className="card mt-4 space-y-4 p-6">
+    <div className="wm-card mt-5 space-y-4 p-6">
       {error && <ErrorBanner message={error} />}
       {!sentTo ? (
         <>
@@ -157,11 +159,11 @@ function ResetPasswordForm({ onBack, onDone }: { onBack: () => void; onDone: () 
             reset your password.
           </p>
           <label className="block">
-            <span className="label">Mobile number</span>
-            <input className="field" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={phone} maxLength={16} onChange={(e) => setPhone(e.target.value)} />
+            <span className="wm-label">Mobile number</span>
+            <input className="wm-field" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={phone} maxLength={16} onChange={(e) => setPhone(e.target.value)} />
           </label>
           <button
-            className="btn-primary w-full"
+            className="wm-btn w-full"
             disabled={busy || phone.replace(/\D/g, "").length < 10}
             onClick={() => void run(async () => setSentTo((await api.requestPasswordReset(phone)).sent_to), "Could not send the code")}
           >
@@ -172,26 +174,26 @@ function ResetPasswordForm({ onBack, onDone }: { onBack: () => void; onDone: () 
         <>
           <p className="text-sm text-muted">If that number belongs to an account, a code was sent to {sentTo}.</p>
           <label className="block">
-            <span className="label">6-digit code</span>
-            <input className="field" inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={8} onChange={(e) => setCode(e.target.value)} />
+            <span className="wm-label">6-digit code</span>
+            <input className="wm-field" inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={8} onChange={(e) => setCode(e.target.value)} />
           </label>
           <label className="block">
-            <span className="label">New password</span>
-            <input className="field" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <span className="wm-label">New password</span>
+            <input className="wm-field" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
           <button
-            className="btn-primary w-full"
+            className="wm-btn w-full"
             disabled={busy || code.trim().length < 4 || password.length < 8}
             onClick={() => void run(async () => { await api.confirmPasswordReset(phone, code.trim(), password); onDone(); }, "Could not reset the password")}
           >
             Set new password
           </button>
-          <button className="w-full text-sm text-muted underline" onClick={() => setSentTo("")}>
+          <button className="min-h-11 w-full text-[0.95rem] font-semibold text-muted underline underline-offset-4 hover:text-chai" onClick={() => setSentTo("")}>
             Use a different number
           </button>
         </>
       )}
-      <button className="w-full text-sm text-muted underline" onClick={onBack}>
+      <button className="min-h-11 w-full text-[0.95rem] font-semibold text-muted underline underline-offset-4 hover:text-chai" onClick={onBack}>
         Back to sign in
       </button>
     </div>

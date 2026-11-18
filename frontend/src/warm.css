@@ -1,0 +1,350 @@
+/* "Chai stall" print theme for the public pages (landing, sign-in).
+   Paper, ink, saffron, chilli and indigo; hard ink outlines with offset shadows, paper grain, hand-made motion.
+   Everything is scoped under .warm so the app screens keep their own look. Imported from index.css. */
+
+@theme static {
+  --color-paper: #f5ecdc;
+  --color-paper-2: #ecdfc6;
+  --color-jasmine: #fffaf0;
+  --color-chai: #1c1712;
+  --color-saffron: #f5a623;
+  --color-saffron-deep: #e08a00;
+  --color-chilli: #d6402a;
+  --color-chilli-text: #aa2f1b;
+  --color-neel: #1f2d6e;
+  --color-butter: #fbe2a0;
+  --color-blush: #f6cfc3;
+  --color-mist: #cfd6f1;
+
+  /* Fraunces: a soft, wonky serif with real character. Tiro faces carry Tamil and Devanagari in the same serif spirit. */
+  --font-display: "Fraunces Variable", "Iowan Old Style", Georgia, "Tiro Tamil", "Tiro Devanagari Hindi", serif;
+  --font-body: "Instrument Sans Variable", "Segoe UI", system-ui, -apple-system, "Nirmala UI", "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
+  --font-hand: "Kalam", "Segoe Print", "Bradley Hand", cursive;
+  --font-tamil: "Tiro Tamil", "Noto Serif Tamil", "Latha", serif;
+  --font-deva: "Tiro Devanagari Hindi", "Noto Serif Devanagari", "Mangal", serif;
+}
+
+/* ---------- page scope ---------- */
+.warm {
+  color-scheme: light;
+  /* Re-point the shared tokens so shared bits (error banners, muted text, focus rings) read correctly on paper. */
+  --color-ink: #1c1712;
+  --color-muted: #5a5046;
+  --color-canvas: #f5ecdc;
+  --color-surface: #fffaf0;
+  --color-subtle: rgb(28 23 18 / 0.06);
+  --color-line: rgb(28 23 18 / 0.22);
+  --color-danger: #a8231b;
+  --color-danger-soft: rgb(168 35 27 / 0.1);
+  --color-accent: #0f6b5c;
+  --color-accent-soft: rgb(15 107 92 / 0.1);
+  --color-neon: #1f2d6e;
+  --color-brand: #1f2d6e;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--color-paper);
+  color: var(--color-chai);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+/* Paper grain: a fixed speckle layer over the whole page. */
+.warm::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .11 0 0 0 0 .09 0 0 0 0 .07 .9 0 0 0 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* The app's aurora background is behind this page; stop it animating for nothing. */
+body.warm-body {
+  background: #f5ecdc;
+}
+body.warm-body::before,
+body.warm-body::after {
+  display: none;
+}
+.warm ::selection {
+  background: var(--color-saffron);
+  color: var(--color-chai);
+}
+
+/* Shared alert banners (sign-in errors) get the same inked-sticker treatment. */
+.warm [role="alert"] {
+  border: 2.5px solid var(--color-chai);
+  background: var(--color-blush);
+  color: var(--color-chai);
+  font-weight: 600;
+  box-shadow: 3px 3px 0 var(--color-chai);
+}
+
+/* ---------- type ---------- */
+.wm-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+.wm-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variation-settings: "SOFT" 80, "WONK" 1, "opsz" 72;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+.wm-hand {
+  font-family: var(--font-hand);
+  line-height: 1.25;
+}
+.wm-tamil {
+  font-family: var(--font-tamil);
+  line-height: 1.5;
+}
+.wm-deva {
+  font-family: var(--font-deva);
+  line-height: 1.5;
+}
+.wm-eyebrow {
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ---------- parts ---------- */
+@utility wm-card {
+  background: var(--color-jasmine);
+  border: 2.5px solid var(--color-chai);
+  border-radius: 26px;
+  box-shadow: 6px 6px 0 var(--color-chai);
+}
+@utility wm-lift {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s;
+  &:hover {
+    transform: translate(-3px, -3px) rotate(0deg);
+    box-shadow: 9px 9px 0 var(--color-chai);
+  }
+}
+@utility wm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0.7rem 1.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--color-chai);
+  background: var(--color-saffron);
+  border: 2.5px solid var(--color-chai);
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--color-chai);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+  &:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-chai);
+    background: #ffb83d;
+  }
+  &:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 var(--color-chai);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+@utility wm-btn-quiet {
+  background: var(--color-jasmine);
+  &:hover:not(:disabled) {
+    background: #fff;
+  }
+}
+@utility wm-field {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  color: var(--color-chai);
+  background: var(--color-jasmine);
+  border: 2.5px solid var(--color-chai);
+  border-radius: 14px;
+  outline: none;
+  transition: box-shadow 0.15s, transform 0.15s;
+  &::placeholder {
+    color: #75695c;
+  }
+  &:focus {
+    box-shadow: 4px 4px 0 var(--color-saffron);
+    transform: translate(-1px, -1px);
+  }
+}
+@utility wm-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+@utility wm-sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border: 2px solid var(--color-chai);
+  border-radius: 999px;
+  background: var(--color-butter);
+  font-weight: 700;
+  font-size: 0.85rem;
+  box-shadow: 3px 3px 0 var(--color-chai);
+}
+/* Kolam-style dot grid. */
+.wm-dots {
+  background-image: radial-gradient(circle, rgb(28 23 18 / 0.3) 1.6px, transparent 1.8px);
+  background-size: 22px 22px;
+}
+
+.wm-dots-light {
+  background-image: radial-gradient(circle, rgb(255 250 240 / 0.14) 1.6px, transparent 1.8px);
+  background-size: 24px 24px;
+}
+
+/* ---------- motion ---------- */
+@keyframes wm-rise {
+  from { opacity: 0; transform: translateY(0.5em) rotate(1.5deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wm-swipe {
+  to { background-size: 100% 100%; }
+}
+@keyframes wm-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes wm-marquee {
+  to { transform: translateX(-50%); }
+}
+@keyframes wm-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes wm-wobble {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes wm-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes wm-pop {
+  0% { opacity: 0; transform: scale(0.88) rotate(-2deg); }
+  60% { opacity: 1; transform: scale(1.04) rotate(0.6deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes wm-bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+@keyframes wm-caret {
+  50% { opacity: 0; }
+}
+@keyframes wm-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-4px); }
+}
+
+.wm-word {
+  display: inline-block;
+  animation: wm-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+}
+/* Marker highlight that swipes in behind a phrase. */
+.wm-mark {
+  background-image: linear-gradient(transparent 56%, var(--color-saffron) 56%, var(--color-saffron) 90%, transparent 90%);
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  animation: wm-swipe 0.9s cubic-bezier(0.6, 0.1, 0.2, 1) 0.8s forwards;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+/* Hand-drawn line that draws itself (path needs pathLength="1"). */
+.wm-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: wm-draw 1.1s ease-out var(--dd, 1.4s) forwards;
+}
+.wm-draw-view {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1.4s ease-out var(--dd, 0.3s);
+}
+[data-in] .wm-draw-view {
+  stroke-dashoffset: 0;
+}
+.wm-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: wm-marquee 56s linear infinite;
+}
+.wm-marquee:hover .wm-marquee-track {
+  animation-play-state: paused;
+}
+.wm-spin { animation: wm-spin 26s linear infinite; }
+.wm-spin-slow { animation: wm-spin 60s linear infinite; }
+.wm-wobble { animation: wm-wobble 4s ease-in-out infinite; }
+.wm-bob { animation: wm-bob 5s ease-in-out infinite; }
+.wm-pop { animation: wm-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.wm-bar {
+  transform-origin: bottom;
+  animation: wm-bar 0.9s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.11s);
+}
+.wm-caret {
+  display: inline-block;
+  width: 0.08em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: wm-caret 0.9s steps(1) infinite;
+}
+.wm-wait span {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.3rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: wm-dot 1.1s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.15s);
+}
+
+/* Scroll reveal: only hidden when motion is allowed and the script is running. */
+@media (prefers-reduced-motion: no-preference) {
+  .warm {
+    scroll-behavior: smooth;
+  }
+  html:has(.warm) {
+    scroll-behavior: smooth;
+  }
+  [data-reveal] {
+    transition: opacity 0.7s ease var(--d, 0ms), transform 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms);
+  }
+  [data-reveal]:not([data-in]) {
+    opacity: 0;
+    transform: translateY(28px) rotate(var(--r, 0deg));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-mark { background-size: 100% 100%; animation: none; }
+  .wm-draw, .wm-draw-view { stroke-dashoffset: 0; animation: none; transition: none; }
+  .wm-marquee-track { animation: none; }
+  .wm-spin, .wm-spin-slow, .wm-wobble, .wm-bob, .wm-bar, .wm-caret, .wm-wait span { animation: none; }
+}
