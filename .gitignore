@@ -30,3 +30,7 @@ logs/
 
 # Meeting recordings (private)
 backend/media_private/
+
+# Windows server installer build output
+windows_server/build/
+windows_server/dist/

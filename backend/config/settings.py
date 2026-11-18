@@ -132,10 +132,12 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
     # The worker reports usage over the private Docker network (plain HTTP to backend:8000).
     SECURE_REDIRECT_EXEMPT = [r"^api/internal/"]
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # HTTPS_ONLY=false: office-network servers reached over plain http://192.168.x.x (Windows server package).
+    _https_only = env_bool("HTTPS_ONLY", True)
+    SESSION_COOKIE_SECURE = _https_only
+    CSRF_COOKIE_SECURE = _https_only
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30 if _https_only else 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _https_only
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "same-origin"
