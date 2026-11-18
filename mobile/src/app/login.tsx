@@ -142,7 +142,12 @@ export default function Login() {
               </Pressable>
             </Card>
           )}
-          <Pressable onPress={() => router.push("/server")} style={{ marginTop: 18, alignItems: "center" }} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.push("/server")}
+            style={{ marginTop: 10, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            accessibilityRole="button"
+            accessibilityLabel={`Server ${getApiUrl().replace(/^https?:\/\//, "")}. Change server`}
+          >
             <Text style={{ color: colors.muted, fontSize: 13 }}>
               Server: {getApiUrl().replace(/^https?:\/\//, "")} · <Text style={{ color: colors.brand }}>Change</Text>
             </Text>

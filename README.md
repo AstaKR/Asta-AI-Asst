@@ -1,4 +1,4 @@
-# AI Call Translator
+# Asta Talk (AI Call Translator)
 
 Two-person internet voice calls with live, two-way AI speech translation. First target: **Tamil ↔ Hindi** (English supported by the same pipeline).
 

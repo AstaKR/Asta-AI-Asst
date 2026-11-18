@@ -1,4 +1,4 @@
-# AI Call Translator — mobile app (Expo / React Native)
+# Asta Talk — mobile app (Expo / React Native)
 
 Android first; the code also targets iPhone (needs an Apple developer account and a Mac or EAS to build).
 

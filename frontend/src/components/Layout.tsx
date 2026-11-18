@@ -40,11 +40,15 @@ const ADMIN_NAV: { to: string; label: string; icon: Icon }[] = [
 export function Brand() {
   return (
     <Link to="/" className="group flex items-center gap-2.5 font-semibold tracking-tight text-ink">
-      <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-neon text-[#050816] shadow-[0_0_24px_-2px_rgb(138_123_255/0.9)] transition group-hover:rotate-6">
-        <GlobeIcon width={19} height={19} />
-      </span>
+      <img
+        src="/favicon.svg"
+        alt=""
+        width={36}
+        height={36}
+        className="h-9 w-9 rounded-xl shadow-[0_0_24px_-2px_rgb(138_123_255/0.9)] transition group-hover:rotate-6"
+      />
       <span className="leading-tight">
-        AI Call <span className="gradient-text">Translator</span>
+        Asta <span className="gradient-text">Talk</span>
       </span>
     </Link>
   );

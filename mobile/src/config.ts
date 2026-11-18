@@ -61,7 +61,18 @@ export async function saveServerUrl(url: string | null): Promise<void> {
   }
 }
 
-const LOCAL_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^.]+$|.*\.local$)/i;
+// Office networks, this device, single-word names ("myserver"), .local, and Tailscale (100.64.0.0/10).
+const LOCAL_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|[^.]+$|.*\.local$)/i;
+
+/** True for http:// to a server on the internet: passwords and calls would travel unencrypted. */
+export function isInsecurePublic(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" && !LOCAL_HOST.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Turns what the user typed into a server URL, or returns an error message.

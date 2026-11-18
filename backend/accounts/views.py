@@ -91,7 +91,7 @@ class OTPRequestView(APIView):
         return None
 
     def deliver(self, phone, code):
-        phone_utils.send_sms(phone, f"{code} is your AI Call Translator login code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes.")
+        phone_utils.send_sms(phone, f"{code} is your Asta Talk login code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes.")
 
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
@@ -284,7 +284,7 @@ class PasswordResetRequestView(OTPRequestView):
     def deliver(self, phone, code):
         if PhoneNumber.objects.filter(number=phone).exists():
             phone_utils.send_sms(
-                phone, f"{code} is your AI Call Translator password reset code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes."
+                phone, f"{code} is your Asta Talk password reset code. It expires in {settings.OTP_TTL_SECONDS // 60} minutes."
             )
 
 

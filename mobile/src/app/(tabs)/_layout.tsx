@@ -31,7 +31,7 @@ export default function TabsLayout() {
           key={t.name}
           name={t.name}
           options={{
-            title: t.name === "home" ? "AI Call Translator" : t.title,
+            title: t.name === "home" ? "Asta Talk" : t.title,
             tabBarLabel: t.title,
             tabBarIcon: ({ color, focused, size }) => <Ionicons name={focused ? t.iconActive : t.icon} size={size} color={String(color)} />,
           }}

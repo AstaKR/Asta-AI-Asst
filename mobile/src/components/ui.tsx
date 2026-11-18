@@ -7,6 +7,9 @@ export const colors = {
   ink: "#eef1fb",
   muted: "#a3adc7",
   line: "#2a3358",
+  /** Control boundaries (text boxes): 3:1 against the surface, as non-text contrast requires. */
+  lineStrong: "#5d6a94",
+  success: "#35e0c0",
   surface: "#131a33",
   surfaceStrong: "#1d2650",
   subtle: "#1a2244",
@@ -49,7 +52,8 @@ type Variant = "primary" | "secondary" | "danger";
 
 export function Button(props: { label: string; onPress: () => void; variant?: Variant; disabled?: boolean; busy?: boolean; style?: ViewStyle; icon?: IconName }) {
   const variant = props.variant ?? "primary";
-  const bg = { primary: colors.brand, secondary: colors.surface, danger: colors.danger }[variant];
+  // brandStrong: white text on it is 4.9:1 (on the lighter brand it was 3.95:1, under the 4.5:1 minimum).
+  const bg = { primary: colors.brandStrong, secondary: colors.surface, danger: colors.danger }[variant];
   const fg = variant === "secondary" ? colors.ink : "#fff";
   return (
     <Pressable
@@ -76,26 +80,42 @@ export function Button(props: { label: string; onPress: () => void; variant?: Va
   );
 }
 
-export function Field(props: TextInputProps & { label: string }) {
-  const { label, style, ...rest } = props;
+/** Labelled text box. `hint` is always-visible help; `error` shows under the box and is announced. */
+export function Field(props: TextInputProps & { label: string; hint?: string; error?: string }) {
+  const { label, hint, error, style, ...rest } = props;
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput placeholderTextColor={colors.muted} style={[styles.input, style]} {...rest} />
+      <TextInput
+        placeholderTextColor={colors.muted}
+        accessibilityLabel={label}
+        accessibilityHint={hint}
+        style={[styles.input, error ? { borderColor: colors.danger } : null, style]}
+        {...rest}
+      />
+      {error ? (
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={{ color: colors.danger, fontSize: 13, marginTop: 6 }}>
+          {error}
+        </Text>
+      ) : hint ? (
+        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 6, lineHeight: 18 }}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
 
-export function Banner({ tone, children }: { tone: "warn" | "danger" | "info"; children: ReactNode }) {
+export function Banner({ tone, children }: { tone: "warn" | "danger" | "info" | "success"; children: ReactNode }) {
   const map = {
     warn: [colors.warnSoft, colors.warn],
     danger: [colors.dangerSoft, colors.danger],
+    // info is brand-on-brandSoft (3.4:1): fine for large/secondary use, so confirmations use success (7.5:1).
     info: [colors.brandSoft, colors.brand],
+    success: [colors.accentSoft, colors.success],
   } as const;
   const [bg, fg] = map[tone];
   return (
-    <View style={[styles.banner, { backgroundColor: bg }]} accessibilityRole="alert">
-      <Text style={{ color: fg, fontSize: 14 }}>{children}</Text>
+    <View style={[styles.banner, { backgroundColor: bg }]} accessibilityRole="alert" accessibilityLiveRegion="polite">
+      <Text style={{ color: fg, fontSize: 14, lineHeight: 20 }}>{children}</Text>
     </View>
   );
 }
@@ -137,7 +157,7 @@ export const styles = StyleSheet.create({
   eyebrow: { fontSize: 12, fontWeight: "700", color: colors.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,

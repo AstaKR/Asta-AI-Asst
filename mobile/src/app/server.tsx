@@ -4,7 +4,9 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from "react-n
 
 import { useAuth } from "../auth";
 import { Banner, Button, Card, Field, Muted, Screen, colors, styles } from "../components/ui";
-import { DEFAULT_API_URL, checkServer, getApiUrl, isCustomServer, normalizeServerUrl, type ServerCheck } from "../config";
+import { DEFAULT_API_URL, checkServer, getApiUrl, isCustomServer, isInsecurePublic, normalizeServerUrl, type ServerCheck } from "../config";
+
+type Busy = "test" | "save" | null;
 
 /** Lets each customer point the same APK at their own server (office Wi-Fi or internet). */
 export default function ServerSettings() {
@@ -13,18 +15,24 @@ export default function ServerSettings() {
   const [address, setAddress] = useState(current);
   const [result, setResult] = useState<(ServerCheck & { url: string }) | null>(null);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState<"test" | "save" | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
 
-  async function test(): Promise<string | null> {
+  /** Cleans up the typed address and checks it. Returns the URL when the server answered. */
+  async function test(which: Exclude<Busy, null>): Promise<string | null> {
     setError("");
-    setResult(null);
     const parsed = normalizeServerUrl(address);
     if ("error" in parsed) {
+      setResult(null);
       setError(parsed.error);
       return null;
     }
     setAddress(parsed.url);
+    // Already confirmed a moment ago: don't make the user wait for a second check.
+    if (result?.ok && result.url === parsed.url) return parsed.url;
+    setResult(null);
+    setBusy(which);
     const check = await checkServer(parsed.url);
+    setBusy(null);
     setResult({ ...check, url: parsed.url });
     return check.ok ? parsed.url : null;
   }
@@ -48,19 +56,12 @@ export default function ServerSettings() {
     ]);
   }
 
-  async function onTest() {
-    setBusy("test");
-    await test();
-    setBusy(null);
-  }
-
   async function onSave() {
-    setBusy("test");
-    const url = await test();
-    setBusy(null);
+    const url = await test("save");
     if (url) await apply(url);
   }
 
+  const insecure = result?.ok && isInsecurePublic(result.url);
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Screen>
@@ -73,13 +74,12 @@ export default function ServerSettings() {
             <Muted>{isCustomServer() ? "Your own server" : "Built-in server"}</Muted>
           </Card>
 
-          {error ? <Banner tone="danger">{error}</Banner> : null}
-          {result ? <Banner tone={result.ok ? "info" : "danger"}>{result.ok ? `✓ ${result.message}` : result.message}</Banner> : null}
-
           <Card>
             <Field
               label="Server address"
-              placeholder="192.168.1.50:8000 or https://app.yourcompany.com"
+              placeholder="192.168.1.50:8000"
+              hint="Office Wi-Fi: the server's IP and port. Internet: its web address, like https://app.yourcompany.com."
+              error={error}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
@@ -89,21 +89,20 @@ export default function ServerSettings() {
                 setResult(null);
                 setError("");
               }}
-              onSubmitEditing={onTest}
+              onSubmitEditing={() => test("test")}
               returnKeyType="go"
               maxLength={200}
             />
-            <Button label="Test connection" variant="secondary" icon="wifi" onPress={onTest} busy={busy === "test"} disabled={!!busy} />
-            <Button label="Save and use this server" onPress={onSave} busy={busy === "save"} disabled={!!busy} style={{ marginTop: 10 }} />
+            {result ? <Banner tone={result.ok ? "success" : "danger"}>{result.ok ? `✓ ${result.message}` : result.message}</Banner> : null}
+            {insecure ? <Banner tone="warn">This address is not encrypted (http). Your password and calls would travel in the clear. Use https:// for a server on the internet.</Banner> : null}
+            <Button label="Test connection" variant="secondary" icon="wifi" onPress={() => test("test")} busy={busy === "test"} disabled={busy !== null} />
+            <Button label="Save and use this server" onPress={onSave} busy={busy === "save"} disabled={busy !== null} style={{ marginTop: 10 }} />
             {isCustomServer() ? (
-              <Button label="Use the built-in server" variant="secondary" onPress={() => apply(null)} disabled={!!busy} style={{ marginTop: 10 }} />
+              <Button label="Use the built-in server" variant="secondary" onPress={() => apply(null)} disabled={busy !== null} style={{ marginTop: 10 }} />
             ) : null}
           </Card>
 
-          <Muted style={{ marginTop: 4 }}>
-            Ask your administrator for the address.{"\n"}• Office Wi-Fi server: its IP and port, e.g. 192.168.1.50:8000 (phone on the same Wi-Fi).
-            {"\n"}• Internet server: its web address, e.g. https://app.yourcompany.com.{"\n"}Accounts belong to a server, so changing it signs you out.
-          </Muted>
+          <Muted>Ask your administrator for the address. The phone must be on the same network as an office server. Accounts belong to a server, so changing it signs you out.</Muted>
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>
