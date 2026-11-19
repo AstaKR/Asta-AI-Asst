@@ -314,3 +314,26 @@ export interface Contact {
   last_called_at: string | null;
   created_at: string;
 }
+
+/** What the server allows for calls to normal phone numbers. */
+export interface PhoneConfig {
+  enabled: boolean;
+  dial_enabled: boolean;
+  my_lines: string[];
+  forwarding_number: string | null;
+  allowed_prefixes: string[];
+  ring_seconds: number;
+}
+
+export interface PhoneCall {
+  id: string;
+  room_code: string;
+  direction: "inbound" | "outbound";
+  status: "ringing" | "answered" | "missed" | "declined" | "failed" | "ended";
+  remote_number: string;
+  line_number: string;
+  caller_language: string;
+  created_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+}

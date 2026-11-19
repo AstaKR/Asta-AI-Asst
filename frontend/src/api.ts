@@ -13,6 +13,8 @@ import type {
   Preferences,
   Contact,
   DirectCall,
+  PhoneCall,
+  PhoneConfig,
   Room,
   RoomPreview,
   TokenResponse,
@@ -275,6 +277,13 @@ export const directApi = {
     request<DirectCall>(`/direct/calls/${id}/answer/`, "POST", body),
   /** Callee: decline. Caller: cancel while it rings. */
   decline: (id: string) => request<DirectCall>(`/direct/calls/${id}/decline/`, "POST"),
+};
+
+/** Calls to normal phone numbers (needs a phone line connected on the server). */
+export const phoneApi = {
+  config: () => request<PhoneConfig>("/phone/config/"),
+  dial: (body: { number: string; spoken_language: string; listen_language: string; caller_language: string }) => request<PhoneCall>("/phone/dial/", "POST", body),
+  calls: () => request<PhoneCall[]>("/phone/calls/"),
 };
 
 /** Phonebook. */

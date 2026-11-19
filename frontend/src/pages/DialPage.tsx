@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { ApiError, api, contactsApi, directApi, type LanguageSelection } from "../api";
+import { ApiError, api, contactsApi, directApi, phoneApi, type LanguageSelection } from "../api";
 import { useAuth } from "../auth";
 import { scriptFont } from "../components/call/TableArt";
 import { ContactForm, type ContactDraft } from "../components/dial/ContactForm";
@@ -12,9 +12,12 @@ import { ErrorBanner, Layout, PageHeader } from "../components/Layout";
 import { setSound, soundOn } from "../lib/dtmf";
 import { NATIVE_NAMES } from "../lib/languages";
 import { avatarColor, initialOf, matchContacts } from "../lib/smartDial";
-import type { Contact, DirectCall } from "../types";
+import type { Contact, DirectCall, PhoneCall, PhoneConfig } from "../types";
 
 type Tab = "keypad" | "contacts" | "recent";
+type Line = "app" | "phone";
+const CALLER_LANGUAGES = ["", "ta-IN", "hi-IN", "en-IN"]; // "" = detect from their speech
+const PHONE_STATUS: Record<PhoneCall["status"], string> = { ringing: "Ringing", answered: "In call", missed: "Missed", declined: "Declined", failed: "Failed", ended: "Ended" };
 const TABS: { key: Tab; label: string; icon: typeof KeypadIcon }[] = [
   { key: "keypad", label: "Keypad", icon: KeypadIcon },
   { key: "contacts", label: "Contacts", icon: UsersIcon },
@@ -95,15 +98,21 @@ export function DialPage() {
   const [error, setError] = useState("");
   const [sound, setSoundOn] = useState(soundOn);
   const [typing, setTyping] = useState(false);
+  const [line, setLine] = useState<Line>("app");
+  const [callerLanguage, setCallerLanguage] = useState("");
+  const [phoneConfig, setPhoneConfig] = useState<PhoneConfig | null>(null);
+  const [phoneHistory, setPhoneHistory] = useState<PhoneCall[]>([]);
 
   const loadContacts = useCallback(() => contactsApi.list().then(setContacts).catch(() => undefined), []);
   useEffect(() => {
     void loadContacts();
     directApi.list().then(setHistory).catch(() => undefined);
+    phoneApi.config().then(setPhoneConfig).catch(() => undefined);
+    phoneApi.calls().then(setPhoneHistory).catch(() => undefined);
   }, [loadContacts]);
 
   const goTab = (t: Tab) => setParams(t === "keypad" ? {} : { tab: t }, { replace: true });
-  const suggestions = useMemo(() => (picked ? [] : matchContacts(contacts, to)), [contacts, to, picked]);
+  const suggestions = useMemo(() => (picked || line === "phone" ? [] : matchContacts(contacts, to)), [contacts, to, picked, line]);
   const known = useMemo(() => new Set(contacts.flatMap((c) => [c.username.toLowerCase(), c.target.toLowerCase()])), [contacts]);
 
   function edit(value: string) {
@@ -112,6 +121,7 @@ export function DialPage() {
   }
 
   function pick(c: Contact) {
+    setLine("app");
     setPicked(c);
     setTo(c.target);
     setSel({ spoken_language: c.spoken_language, listen_language: c.listen_language, voice: c.voice });
@@ -133,7 +143,23 @@ export function DialPage() {
     }
   }
 
-  const callTyped = (video: boolean) => void place(to, sel, video, !picked);
+  /** Ring a normal phone number; the server bridges it into a translated call room. */
+  async function placePhone() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await phoneApi.dial({ number: to, spoken_language: sel.spoken_language, listen_language: sel.spoken_language, caller_language: callerLanguage });
+      void api.savePreferences({ spoken_language: sel.spoken_language, listen_language: sel.listen_language });
+      navigate(`/call/${res.room_code}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not place the call");
+      setBusy(false);
+    }
+  }
+
+  const phoneReady = phoneConfig?.dial_enabled ?? false;
+  const phoneDigits = to.replace(/\D/g, "").length;
+  const callTyped = (video: boolean) => (line === "phone" ? void placePhone() : void place(to, sel, video, !picked));
   const callContact = (c: Contact, video: boolean) => void place(c.target, { spoken_language: c.spoken_language, listen_language: c.listen_language, voice: c.voice }, video);
 
   async function rememberFor(c: Contact) {
@@ -157,9 +183,32 @@ export function DialPage() {
   /* ---------------- keypad ---------------- */
   const keypad = (
     <div className="card mx-auto w-full max-w-[24rem] space-y-5 p-5">
+      <div className="grid grid-cols-2 gap-1 rounded-full border-2 border-edge bg-subtle p-1" role="tablist" aria-label="Who are you calling">
+        {(["app", "phone"] as Line[]).map((l) => (
+          <button
+            key={l}
+            type="button"
+            role="tab"
+            aria-selected={line === l}
+            onClick={() => {
+              setLine(l);
+              setPicked(null);
+              setError("");
+            }}
+            className={`rounded-full px-2 py-1.5 text-sm font-bold transition ${line === l ? "border-2 border-edge bg-surface" : "text-muted hover:text-ink"}`}
+          >
+            {l === "app" ? "On Asta Talk (free)" : "Normal phone"}
+          </button>
+        ))}
+      </div>
+      {line === "phone" && phoneConfig && !phoneReady && (
+        <p role="status" className="rounded-2xl border-2 border-warn bg-warn-soft px-3 py-2 text-sm font-semibold text-warn">
+          Calling normal phone numbers is not set up yet: it needs a paid phone line on the server. Use “On Asta Talk” to call people who have the app, free.
+        </p>
+      )}
       <div className="rounded-3xl border-[2.5px] border-edge bg-butter p-3.5 text-[#1c1712] shadow-[4px_4px_0_var(--color-shadow)]">
         <div className="flex items-center justify-between text-[0.7rem] font-extrabold tracking-[0.16em] uppercase">
-          <span>{picked ? "Calling" : "Dialling"}</span>
+          <span>{picked ? "Calling" : line === "phone" ? "Phone number" : "Dialling"}</span>
           <span className="flex gap-1">
             <button
               type="button"
@@ -173,7 +222,7 @@ export function DialPage() {
             >
               {sound ? "Sound on" : "Sound off"}
             </button>
-            <button type="button" onClick={() => setTyping(!typing)} aria-pressed={typing} className="rounded-full border-2 border-edge px-2 py-0.5 hover:bg-[#1c1712]/10" title="Use the on-screen keyboard to type a username">
+            <button type="button" hidden={line === "phone"} onClick={() => setTyping(!typing)} aria-pressed={typing} className="rounded-full border-2 border-edge px-2 py-0.5 hover:bg-[#1c1712]/10" title="Use the on-screen keyboard to type a username">
               {typing ? "Keypad only" : "Type a name"}
             </button>
           </span>
@@ -189,11 +238,11 @@ export function DialPage() {
           value={to}
           onChange={(e) => edit(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && callTyped(false)}
-          inputMode={typing ? "text" : "none"}
+          inputMode={line === "phone" ? "tel" : typing ? "text" : "none"}
           autoComplete="off"
           spellCheck={false}
-          aria-label="Username or mobile number"
-          placeholder="name or number"
+          aria-label={line === "phone" ? "Phone number" : "Username or mobile number"}
+          placeholder={line === "phone" ? "+91 98765 43210" : "name or number"}
           className="mt-1 w-full bg-transparent text-center font-mono text-[2rem] leading-tight tracking-wide text-[#1c1712] outline-none placeholder:font-hand placeholder:text-[1.35rem] placeholder:tracking-normal placeholder:text-[#1c1712]/55"
         />
         <div className="flex min-h-[2.4rem] flex-wrap justify-center gap-1.5" aria-live="polite">
@@ -211,17 +260,41 @@ export function DialPage() {
       <div className="rounded-2xl border-2 border-dashed border-edge/50 px-2 pt-3 pb-2">
         <div className="flex items-start justify-center gap-1">
           <LanguageKnob label="I speak" value={sel.spoken_language} onChange={(c) => setSel({ ...sel, spoken_language: c })} />
-          <button
-            type="button"
-            onClick={() => setSel({ ...sel, spoken_language: sel.listen_language, listen_language: sel.spoken_language })}
-            className="btn-ghost mt-8 !min-h-9 h-9 w-9 shrink-0 !p-0"
-            aria-label="Swap what I speak and hear"
-            title="Swap"
-          >
-            <SwapIcon width={18} height={18} />
-          </button>
-          <LanguageKnob label="I hear" value={sel.listen_language} onChange={(c) => setSel({ ...sel, listen_language: c })} />
+          {line === "app" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setSel({ ...sel, spoken_language: sel.listen_language, listen_language: sel.spoken_language })}
+                className="btn-ghost mt-8 !min-h-9 h-9 w-9 shrink-0 !p-0"
+                aria-label="Swap what I speak and hear"
+                title="Swap"
+              >
+                <SwapIcon width={18} height={18} />
+              </button>
+              <LanguageKnob label="I hear" value={sel.listen_language} onChange={(c) => setSel({ ...sel, listen_language: c })} />
+            </>
+          )}
         </div>
+        {line === "phone" && (
+          <div className="px-2 pt-1 pb-1">
+            <p className="label">They speak</p>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="What the person you call speaks">
+              {CALLER_LANGUAGES.map((l) => (
+                <button
+                  key={l || "auto"}
+                  type="button"
+                  role="radio"
+                  aria-checked={callerLanguage === l}
+                  onClick={() => setCallerLanguage(l)}
+                  className={`rounded-full border-2 border-edge px-3 py-1 text-sm font-bold ${callerLanguage === l ? "bg-saffron text-[#1c1712]" : "bg-surface"} ${l ? scriptFont(l) : ""}`}
+                >
+                  {l ? NATIVE_NAMES[l] : "Detect"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">You hear them in your language. They hear a short notice that the call is translated by AI.</p>
+          </div>
+        )}
         {picked && changed && (
           <button type="button" onClick={() => void rememberFor(picked)} className="wm-pop mx-auto mt-1 block text-sm font-bold text-brand underline decoration-2 underline-offset-4">
             Remember these for {picked.name}
@@ -230,16 +303,27 @@ export function DialPage() {
       </div>
 
       <div className="flex items-end justify-around">
-        <RoundButton label="Video" onClick={() => callTyped(true)} disabled={busy || !to.trim()}>
-          <CameraIcon width={24} height={24} />
-        </RoundButton>
-        <RoundButton label={busy ? "Calling…" : "Call"} onClick={() => callTyped(false)} disabled={busy || !to.trim()} primary>
+        {line === "app" ? (
+          <RoundButton label="Video" onClick={() => callTyped(true)} disabled={busy || !to.trim()}>
+            <CameraIcon width={24} height={24} />
+          </RoundButton>
+        ) : (
+          <span className="w-14" />
+        )}
+        <RoundButton label={busy ? "Calling…" : "Call"} onClick={() => callTyped(false)} disabled={busy || (line === "app" ? !to.trim() : !phoneReady || phoneDigits < 10)} primary>
           <PhoneIcon width={30} height={30} />
         </RoundButton>
-        <RoundButton label="Save" onClick={() => openNew({ target: to.trim(), spoken_language: sel.spoken_language, listen_language: sel.listen_language })} disabled={!canSave}>
-          <UserPlusIcon width={24} height={24} />
-        </RoundButton>
+        {line === "app" ? (
+          <RoundButton label="Save" onClick={() => openNew({ target: to.trim(), spoken_language: sel.spoken_language, listen_language: sel.listen_language })} disabled={!canSave}>
+            <UserPlusIcon width={24} height={24} />
+          </RoundButton>
+        ) : (
+          <span className="w-14" />
+        )}
       </div>
+      {line === "phone" && phoneConfig && phoneConfig.allowed_prefixes.length > 0 && (
+        <p className="text-center text-xs text-muted">Indian numbers only ({phoneConfig.allowed_prefixes.join(", ")}).</p>
+      )}
     </div>
   );
 
@@ -362,12 +446,13 @@ export function DialPage() {
 
   /* ---------------- recent ---------------- */
   const recentTab =
-    history.length === 0 ? (
+    history.length === 0 && phoneHistory.length === 0 ? (
       <div className="py-10 text-center">
         <p className="page-title text-[1.7rem]">No calls yet.</p>
         <p className="wm-hand mt-2 text-[1.2rem] text-muted">Calls you make and receive will be listed here.</p>
       </div>
     ) : (
+      <div className="space-y-6">
       <ul className="space-y-3">
         {history.map((c) => {
           const missed = c.status === "missed" && c.direction === "incoming";
@@ -402,11 +487,44 @@ export function DialPage() {
           );
         })}
       </ul>
+      {phoneHistory.length > 0 && (
+        <section aria-label="Phone calls">
+          <p className="eyebrow mb-2">Phone calls</p>
+          <ul className="space-y-3">
+            {phoneHistory.slice(0, 15).map((c) => (
+              <li key={c.id} className="card flex items-center gap-3 !rounded-2xl p-3 !shadow-[3px_3px_0_var(--color-shadow)]">
+                <div className="min-w-0 flex-1">
+                  <p className={`truncate font-bold ${c.status === "missed" ? "text-danger" : ""}`}>
+                    <span aria-hidden="true">{c.direction === "inbound" ? "↙" : "↗"}</span> {c.remote_number || "Unknown number"}
+                  </p>
+                  <p className="truncate text-xs text-muted">
+                    {new Date(c.created_at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} · {PHONE_STATUS[c.status]}
+                  </p>
+                </div>
+                <button
+                  className="btn-primary !min-h-10 h-10 w-10 !p-0"
+                  aria-label={`Dial ${c.remote_number} again`}
+                  title="Dial again"
+                  onClick={() => {
+                    setLine("phone");
+                    setPicked(null);
+                    setTo(c.remote_number);
+                    goTab("keypad");
+                  }}
+                >
+                  <PhoneIcon width={18} height={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      </div>
     );
 
   return (
     <Layout>
-      <PageHeader eyebrow="Calls" title="Dial" description="Call anyone on Asta Talk by name, username or mobile number. You each hear the other in your own language. Free, no phone line needed." />
+      <PageHeader eyebrow="Calls" title="Dial" description="Call anyone on Asta Talk by name, username or mobile number, free, and you each hear the other in your own language. Or switch to Normal phone to ring any Indian mobile or landline when a phone line is connected." />
       {error && (
         <div className="mb-4">
           <ErrorBanner message={error} onDismiss={() => setError("")} />
