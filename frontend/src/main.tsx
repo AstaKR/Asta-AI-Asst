@@ -56,6 +56,7 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/contacts" element={<Navigate to="/dial?tab=contacts" replace />} />
           <Route path="/start" element={guard(<StartPage />)} />
           <Route path="/new" element={guard(<NewCallPage />)} />
           <Route path="/join/:code" element={guard(<JoinPage />)} />

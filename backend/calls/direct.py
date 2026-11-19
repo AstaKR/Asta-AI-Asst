@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -26,7 +26,7 @@ from billing import limits as plan_limits
 from telephony import numbers
 
 from . import usage
-from .models import CallParticipant, CallRoom, DirectCall
+from .models import CallParticipant, CallRoom, Contact, DirectCall
 from .views import _end_room
 
 OPEN = (DirectCall.Status.RINGING, DirectCall.Status.ANSWERED)
@@ -116,7 +116,10 @@ def start(caller, *, target: str, spoken: str, listen: str, video: bool, voice: 
             listen_language=listen,
             voice=voice or pref.voice or settings.DEFAULT_VOICE,
         )
-        return DirectCall.objects.create(room=room, caller=caller, callee=callee)
+        call = DirectCall.objects.create(room=room, caller=caller, callee=callee)
+        # Keep the caller's phonebook up to date: who they call most, and when they last did.
+        Contact.objects.filter(owner=caller, user=callee).update(call_count=F("call_count") + 1, last_called_at=timezone.now())
+        return call
 
 
 def answer(call: DirectCall, user, *, spoken: str | None, listen: str | None) -> None:

@@ -25,7 +25,7 @@ import { WarmShell } from "./warm/WarmShell";
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
 const MAIN_NAV: { to: string; label: string; icon: Icon }[] = [
   { to: "/start", label: "Home", icon: HomeIcon },
-  { to: "/dial", label: "Dial", icon: KeypadIcon },
+  { to: "/dial", label: "Dial & contacts", icon: KeypadIcon },
   { to: "/translate", label: "Translate", icon: GlobeIcon },
   { to: "/face", label: "Face to face", icon: ConversationIcon },
   { to: "/meetings", label: "Meetings", icon: MeetingIcon },

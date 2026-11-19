@@ -209,7 +209,7 @@ export function StartPage() {
           </Tile>
         </Reveal>
         <Reveal className="md:col-span-2" delay={160}>
-          <Tile to="/dial" tilt={0.5} className="h-full" title="Dial" body="Call another person on Asta Talk by name or number.">
+          <Tile to="/dial" tilt={0.5} className="h-full" title="Dial" body="A keypad and your contacts, with the languages you use for each person.">
             <DialArt still={still} />
           </Tile>
         </Reveal>

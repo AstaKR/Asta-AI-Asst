@@ -11,6 +11,7 @@ import type {
   Paginated,
   Plan,
   Preferences,
+  Contact,
   DirectCall,
   Room,
   RoomPreview,
@@ -274,4 +275,14 @@ export const directApi = {
     request<DirectCall>(`/direct/calls/${id}/answer/`, "POST", body),
   /** Callee: decline. Caller: cancel while it rings. */
   decline: (id: string) => request<DirectCall>(`/direct/calls/${id}/decline/`, "POST"),
+};
+
+/** Phonebook. */
+export const contactsApi = {
+  list: () => request<Contact[]>("/contacts/"),
+  create: (body: { target: string; name?: string; spoken_language: string; listen_language: string; voice?: string; favorite?: boolean }) =>
+    request<Contact>("/contacts/", "POST", body),
+  update: (id: number, body: Partial<Pick<Contact, "name" | "spoken_language" | "listen_language" | "voice" | "favorite">>) =>
+    request<Contact>(`/contacts/${id}/`, "PATCH", body),
+  remove: (id: number) => request<void>(`/contacts/${id}/`, "DELETE"),
 };

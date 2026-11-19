@@ -157,3 +157,30 @@ class DirectCall(models.Model):
 
     def __str__(self) -> str:
         return f"{self.caller} → {self.callee} ({self.status})"
+
+
+class Contact(models.Model):
+    """A person in someone's phonebook: who they are on this app and how the owner wants to talk to them.
+
+    `spoken_language` / `listen_language` are the OWNER's settings when calling this person ("I speak Tamil, I hear
+    Hindi"); they pre-fill the dialer and are used when the owner taps call.
+    """
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="contacts")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")  # the person saved
+    name = models.CharField(max_length=60)
+    target = models.CharField(max_length=40)  # the username or mobile number the owner typed (kept for display)
+    spoken_language = models.CharField(max_length=10, default="ta-IN")
+    listen_language = models.CharField(max_length=10, default="ta-IN")
+    voice = models.CharField(max_length=40, blank=True)
+    favorite = models.BooleanField(default=False)
+    call_count = models.PositiveIntegerField(default=0)
+    last_called_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["owner", "user"], name="unique_contact_per_person")]
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"{self.owner} -> {self.name}"

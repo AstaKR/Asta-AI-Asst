@@ -298,3 +298,19 @@ export interface KeysPayload {
   keys: ProviderKeyStatus[];
   audit: { name: string; action: "set" | "clear" | "test"; ok: boolean; detail: string; user: string | null; at: string }[];
 }
+
+/** A saved person in the phonebook, with the languages to use when calling them. */
+export interface Contact {
+  id: number;
+  name: string;
+  /** The username or mobile number that was typed when saving. */
+  target: string;
+  username: string;
+  spoken_language: string;
+  listen_language: string;
+  voice: string;
+  favorite: boolean;
+  call_count: number;
+  last_called_at: string | null;
+  created_at: string;
+}

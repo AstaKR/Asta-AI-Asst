@@ -198,3 +198,30 @@ export const ClockIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M12 7v5l3 2" />
   </svg>
 );
+export const StarIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z" />
+  </svg>
+);
+export const PencilIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="m4 20 1-4L16.5 4.5a2 2 0 0 1 3 3L8 19zM14.5 6.5l3 3" />
+  </svg>
+);
+export const SearchIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m16 16 4.5 4.5" />
+  </svg>
+);
+export const UserPlusIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="10" cy="8" r="3.5" />
+    <path d="M3.5 20a6.5 6.5 0 0 1 13 0M18 8v6M15 11h6" />
+  </svg>
+);
+export const BackspaceIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M9 5h10a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19H9l-6-7zM12.5 9.5l5 5M17.5 9.5l-5 5" />
+  </svg>
+);

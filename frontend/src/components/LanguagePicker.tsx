@@ -5,7 +5,7 @@ import { LANGUAGE_NAMES, NATIVE_NAMES } from "../lib/languages";
 import { scriptFont } from "./call/TableArt";
 import { CheckIcon } from "./Icons";
 
-const VOICES = ["shubh", "aditya", "rahul", "rohan", "amit", "ritu", "priya", "neha", "pooja", "kavya"];
+export const VOICES = ["shubh", "aditya", "rahul", "rohan", "amit", "ritu", "priya", "neha", "pooja", "kavya"];
 
 interface Props {
   value: LanguageSelection;

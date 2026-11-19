@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import direct, views
+from . import contacts, direct, views
 
 urlpatterns = [
     path("health/", views.HealthView.as_view()),
@@ -14,6 +14,8 @@ urlpatterns = [
     path("usage/", views.UsageSummaryView.as_view()),
     path("internal/usage/", views.WorkerUsageReportView.as_view()),
     # App-to-app dialer
+    path("contacts/", contacts.ContactListCreateView.as_view()),
+    path("contacts/<int:pk>/", contacts.ContactDetailView.as_view()),
     path("direct/calls/", direct.DirectCallListCreateView.as_view()),
     path("direct/incoming/", direct.DirectIncomingView.as_view()),
     path("direct/calls/<uuid:pk>/", direct.DirectCallDetailView.as_view()),
