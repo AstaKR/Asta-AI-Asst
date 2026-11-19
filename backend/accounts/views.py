@@ -11,10 +11,11 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework.views import APIView
 
 from . import phone as phone_utils
+from . import throttle as login_throttle
 from .models import OTPChallenge, PhoneNumber, get_preference
 from .serializers import (
     ChangePasswordSerializer,
@@ -62,15 +63,27 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    # General flood protection only; guessing is limited by accounts/throttle.py, which counts failures per name and per address.
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data["username"]
+        wait = login_throttle.seconds_blocked(request, username)
+        if wait:
+            minutes = max(1, (wait + 59) // 60)
+            res = Response(
+                {"detail": f"Too many failed sign-in attempts. Try again in {minutes} minute{'s' if minutes != 1 else ''}."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+            res["Retry-After"] = str(wait)
+            return res
         user = authenticate(request, **serializer.validated_data)
         if user is None:
+            login_throttle.record_failure(request, username)
             return Response({"detail": "Invalid username or password."}, status=status.HTTP_400_BAD_REQUEST)
+        login_throttle.record_success(request, username)
         login(request, user)
         return Response(_with_token(request, user, user_payload(user)))
 

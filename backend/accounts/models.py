@@ -47,3 +47,18 @@ class OTPChallenge(models.Model):
 def get_preference(user) -> LanguagePreference:
     pref, _ = LanguagePreference.objects.get_or_create(user=user, defaults={"display_name": user.username})
     return pref
+
+
+class LoginAttempt(models.Model):
+    """Recent FAILED sign-ins, one row per account name and one per network address.
+
+    Kept in the database (not in a worker's memory) so every server worker and a restart see the same counts.
+    Only failures are counted, so a whole office sharing one internet address is not locked out by normal use.
+    """
+
+    key = models.CharField(max_length=160, unique=True)  # "user:<name>" or "ip:<address>"
+    failures = models.PositiveIntegerField(default=0)
+    window_started = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return f"{self.key}: {self.failures}"

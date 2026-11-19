@@ -166,6 +166,10 @@ APK (see `mobile/README.md`).
 | Problem | Check |
 |---|---|
 | Site doesn't open / no HTTPS | DNS points to the server; ports 80/443 reach it; `asta logs web` |
+| Someone cannot sign in ("Too many failed sign-in attempts") | They guessed wrong 8 times in 15 minutes. It lifts by itself, or clear it now: `asta exec backend python manage.py unlock_login --username NAME` (or `--all`). Only failed attempts count, per account name and per address. |
+| Everyone behind one office address gets blocked | `TRUSTED_PROXIES=1` must be in `.env` (Caddy is in front), so each person's real address is used. Then `asta up -d` |
+| Sign-in "works" but the next page says not signed in | The site is being opened over plain `http://`; the session cookie is HTTPS-only. Use the `https://` address |
+| People are signed out too often | Sessions last 30 days and renew daily while in use; change with `SESSION_DAYS` |
 | Calls do not connect | `asta logs worker` shows it registered; `LIVEKIT_URL`/key/secret match LiveKit Cloud → API keys |
 | Calls stop working one day | LiveKit Cloud → Usage and limits: the free Build plan's monthly allowance may be used up |
 | Translation or speech fails | `asta logs backend` and `asta logs worker`; `SARVAM_API_KEY` set (or added in Admin → API keys); Sarvam credit left |

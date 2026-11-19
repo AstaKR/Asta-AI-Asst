@@ -70,6 +70,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.middleware.SlidingSessionMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -126,7 +127,16 @@ CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
+# Signed-in people stay signed in while they use the app; away longer than this and they sign in again.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * env_int("SESSION_DAYS", 30)
+SESSION_REFRESH_SECONDS = 60 * 60 * 24  # the lifetime restarts at most once a day (accounts/middleware.py)
+
+# Sign-in protection (accounts/throttle.py): only FAILED attempts count, per account name and per address.
+LOGIN_FAIL_LIMIT_USER = env_int("LOGIN_FAIL_LIMIT_USER", 8)
+LOGIN_FAIL_LIMIT_IP = env_int("LOGIN_FAIL_LIMIT_IP", 40)  # high: a whole office can share one internet address
+LOGIN_FAIL_WINDOW_SECONDS = env_int("LOGIN_FAIL_WINDOW_SECONDS", 900)
+# How many reverse proxies of ours sit in front (1 with the Docker setup's Caddy, 0 when reached directly).
+TRUSTED_PROXIES = env_int("TRUSTED_PROXIES", 0)
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
@@ -156,10 +166,11 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
+    "NUM_PROXIES": TRUSTED_PROXIES or None,
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/minute",
         "user": "300/minute",
-        "auth": "20/hour",
+        "auth": env("AUTH_RATE", "60/hour"),
         "otp": env("OTP_RATE", "10/hour"),
         "room_create": env("ROOM_CREATE_RATE", "10/hour"),
         "token": env("TOKEN_RATE", "30/hour"),
