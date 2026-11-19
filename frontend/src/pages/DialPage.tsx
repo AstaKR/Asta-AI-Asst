@@ -93,7 +93,7 @@ export function DialPage() {
 
       {history.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Recent</h2>
+          <h2 className="page-title text-[1.5rem]">Recent</h2>
           <ul className="card mt-3 divide-y divide-line">
             {history.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-4 px-5 py-3.5 text-sm">

@@ -209,14 +209,14 @@ function LiveSession({ title, meetingId, maxSeconds, summariesEnabled }: { title
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="eyebrow">// live meeting</p>
-          <h2 className="truncate text-xl font-bold">{title}</h2>
+          <p className="eyebrow">Live meeting</p>
+          <h2 className="page-title truncate text-[1.9rem]">{title}</h2>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span className="chip bg-danger-soft text-danger">
+          <span className="chip bg-danger-soft font-bold text-danger">
             <span className="h-2 w-2 animate-pulse rounded-full bg-current" /> REC
           </span>
-          <span className="chip bg-subtle font-mono text-ink">
+          <span className="sticker !bg-surface font-mono !text-ink">
             {formatClock(elapsed * 1000)} / {formatClock(maxSeconds * 1000)}
           </span>
           {pending > 0 && (
@@ -231,21 +231,21 @@ function LiveSession({ title, meetingId, maxSeconds, summariesEnabled }: { title
         <MicOrb stream={micStream} paused={phase === "saving"} />
       </RoundTable>
       {seats.length === 0 && (
-        <p className="text-center text-sm text-muted">Start talking. Speakers take their seats here about {CHUNK_SECONDS} seconds after they speak.</p>
+        <p className="wm-hand text-center text-[1.1rem] text-muted">Start talking. Speakers take their seats here about {CHUNK_SECONDS} seconds after they speak.</p>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <section aria-label="Transcript" className="max-h-[28rem] min-h-44 space-y-2.5 overflow-y-auto rounded-2xl bg-subtle p-4">
-          {segments.length === 0 && <p className="text-sm text-muted">The conversation appears here, line by line.</p>}
+        <section aria-label="Transcript" className="max-h-[28rem] min-h-44 space-y-2.5 overflow-y-auto rounded-2xl border-[2.5px] border-edge bg-surface p-4 shadow-[4px_4px_0_var(--color-shadow)]">
+          {segments.length === 0 && <p className="wm-hand text-[1.1rem] text-muted">The conversation appears here, line by line.</p>}
           {segments.map((s) => (
-            <div key={s.index} className="animate-rise rounded-xl border-l-[3px] bg-surface/60 py-2 pr-3 pl-3" style={{ borderLeftColor: colorOf(s.speaker) }}>
+            <div key={s.index} className="wm-pop rounded-xl border-2 border-l-[6px] border-edge/60 bg-canvas py-2 pr-3 pl-3" style={{ borderLeftColor: colorOf(s.speaker) }}>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-mono text-[11px] font-semibold tracking-wide uppercase" style={{ color: colorOf(s.speaker) }}>
+                <span className="font-mono text-[11px] font-medium tracking-wide uppercase" style={{ color: colorOf(s.speaker) }}>
                   {s.speaker || "Speaker"}
                 </span>
                 <span className="font-mono text-[10px] text-muted">{formatClock(s.start_ms)}</span>
               </div>
-              <p className="mt-0.5 text-[15px] leading-snug">{s.original_text}</p>
+              <p className="mt-0.5 text-[1.02rem] leading-snug">{s.original_text}</p>
             </div>
           ))}
           <div ref={endRef} />
@@ -258,17 +258,17 @@ function LiveSession({ title, meetingId, maxSeconds, summariesEnabled }: { title
               Refresh now
             </button>
           </div>
-          <div className="flex flex-wrap gap-1 rounded-xl bg-subtle p-1 text-xs font-medium" role="tablist">
+          <div className="flex flex-wrap gap-1 rounded-full border-2 border-edge bg-subtle p-1 text-xs font-bold" role="tablist">
             {tabs.map((t) => (
               <button
                 key={t.key}
                 role="tab"
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex-1 rounded-lg px-2.5 py-1.5 whitespace-nowrap transition-colors ${tab === t.key ? "bg-brand-soft text-ink" : "text-muted"}`}
+                className={`flex-1 rounded-full border-2 px-2.5 py-1.5 whitespace-nowrap transition ${tab === t.key ? "border-edge bg-saffron text-[#1c1712] shadow-[2px_2px_0_var(--color-shadow)]" : "border-transparent text-muted hover:text-ink"}`}
               >
                 {t.label}
-                {t.count ? <span className="ml-1 font-mono text-[10px] text-neon">{t.count}</span> : null}
+                {t.count ? <span className="ml-1 font-mono text-[10px] font-medium">{t.count}</span> : null}
               </button>
             ))}
           </div>
@@ -301,7 +301,7 @@ function Items({ items, empty }: { items: string[]; empty: string }) {
     <ul className="space-y-1.5">
       {items.map((t, i) => (
         <li key={i} className="flex gap-2">
-          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-neon" />
+          <span className="mt-[0.45rem] h-2 w-2 shrink-0 rounded-full border-2 border-edge bg-saffron" />
           <span>{t}</span>
         </li>
       ))}

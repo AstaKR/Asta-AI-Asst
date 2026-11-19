@@ -3,12 +3,14 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthProvider, RequireAuth, useAuth } from "./auth";
+import "./fonts";
 import "./index.css";
 
-// Apply a saved light/dark choice before the first paint (otherwise the theme follows the OS).
+// Set the theme before the first paint: the saved choice, otherwise the system light/dark setting.
 try {
   const saved = localStorage.getItem("theme");
-  if (saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+  const system = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", saved === "light" || saved === "dark" ? saved : system);
 } catch {
   /* storage unavailable */
 }

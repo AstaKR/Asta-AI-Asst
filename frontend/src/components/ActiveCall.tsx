@@ -20,10 +20,18 @@ import { effectiveLanguage, isMyTranslationTrack, micAllowedIdentities, needsTra
 import { languageName, NATIVE_NAMES } from "../lib/languages";
 import { initialTranslatorState, parseTranslatorMessage, translatorReducer } from "../lib/translatorEvents";
 import type { Room, TokenResponse } from "../types";
-import { CameraIcon, CameraOffIcon, CopyIcon, MicIcon, MicOffIcon, PhoneOffIcon, SettingsIcon } from "./Icons";
+import { Switch } from "./call/Switch";
+import { scriptFont } from "./call/TableArt";
+import { CameraIcon, CameraOffIcon, CopyIcon, MicIcon, MicOffIcon, PhoneIcon, PhoneOffIcon, SettingsIcon } from "./Icons";
 import { LanguagePicker } from "./LanguagePicker";
 import { Brand, ErrorBanner } from "./Layout";
 import { Subtitles } from "./Subtitles";
+
+/** Round, chunky call-control button. */
+const ROUND = "btn !h-14 !w-14 !rounded-full !p-0 !border-edge shadow-[3px_3px_0_var(--color-shadow)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none";
+
+/** Same look as ROUND but wide enough for a text label. */
+const PILL = "btn !h-14 !px-4 whitespace-nowrap sm:!px-5 !border-edge shadow-[3px_3px_0_var(--color-shadow)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none";
 
 const supportsOutputSelection = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
 
@@ -216,18 +224,18 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
   return (
     <div className="flex h-full min-h-screen flex-col bg-canvas">
       {audioElements}
-      <header className="border-b border-line bg-surface">
+      <header className="border-b-[2.5px] border-edge bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Brand />
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <ConnectionChip state={connection} />
             <TranslatorChip enabled={info.translation_enabled} agentPresent={Boolean(agent)} availability={state.availability} needed={anyTranslation} />
             {recording.saving && (
-              <span className="chip bg-danger-soft font-semibold text-danger" title={`${recordWhat} — everyone agreed`}>
+              <span className="chip animate-pulse bg-danger-soft font-bold text-danger" title={`${recordWhat} — everyone agreed`}>
                 ● REC
               </span>
             )}
-            <span className="chip bg-subtle font-mono text-ink" title="Call time / limit">
+            <span className="sticker !bg-surface font-mono !text-ink" title="Call time / limit">
               {formatClock(elapsed)} / {formatClock(info.max_duration_seconds)}
             </span>
           </div>
@@ -237,7 +245,7 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
       <div className="mx-auto w-full max-w-6xl flex-1 space-y-4 px-4 py-5 sm:px-6">
         <StartAudio label="Tap to enable call audio" className="btn-primary w-full" />
         {othersAsked && !iConsented && declinedAsk !== recording.consented.join() && (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn">
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-warn bg-warn-soft px-4 py-3 text-sm font-semibold text-warn shadow-[3px_3px_0_var(--color-warn)]">
             <span>
               <strong>{otherName}</strong> wants to record this call ({recordWhat.toLowerCase()}). It is saved only if you agree too.
             </span>
@@ -277,7 +285,7 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
         {remaining < 60 && remaining > 0 && <Banner tone="warn">The call ends in {Math.ceil(remaining)} s (duration limit).</Banner>}
 
         {info.video_enabled && (
-          <div className="relative aspect-video max-h-[60vh] w-full overflow-hidden rounded-2xl bg-slate-900">
+          <div className="relative aspect-video max-h-[60vh] w-full overflow-hidden rounded-3xl border-[2.5px] border-edge bg-[#1c1712] shadow-[var(--shadow-card)]">
             {remoteCam ? (
               <VideoTrack trackRef={remoteCam} className="h-full w-full object-cover" />
             ) : (
@@ -289,7 +297,7 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
               <VideoTrack trackRef={localCam} className="absolute bottom-3 right-3 w-28 rounded-xl border-2 border-white object-cover sm:w-44 [transform:scaleX(-1)]" />
             )}
             {showSubtitles && lastLine && lastLine.speaker !== myIdentity && (
-              <p className="absolute bottom-3 left-3 right-36 rounded-lg bg-slate-900/75 px-3 py-2 text-base text-white sm:right-52">
+              <p className="absolute bottom-3 left-3 right-36 rounded-xl bg-[#1c1712]/85 px-3 py-2 text-base text-white sm:right-52">
                 {lastLine.translation ?? lastLine.original}
               </p>
             )}
@@ -352,12 +360,12 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
         )}
       </div>
 
-      <footer className="sticky bottom-0 border-t border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-3 px-4 py-3">
+      <footer className="sticky bottom-0 border-t-[2.5px] border-edge bg-surface">
+        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2.5 px-3 py-3 sm:gap-3 sm:px-4">
           <button
             onClick={toggleMic}
             aria-pressed={!isMicrophoneEnabled}
-            className={`btn h-12 w-12 rounded-full p-0 ${isMicrophoneEnabled ? "border border-line bg-surface text-ink hover:bg-subtle" : "bg-warn-soft text-warn"}`}
+            className={`${ROUND} ${isMicrophoneEnabled ? "bg-surface text-ink" : "!bg-[#b3301c] text-white"}`}
             title={isMicrophoneEnabled ? "Mute microphone" : "Unmute microphone"}
           >
             {isMicrophoneEnabled ? <MicIcon /> : <MicOffIcon />}
@@ -367,7 +375,7 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
             <button
               onClick={toggleCamera}
               aria-pressed={!isCameraEnabled}
-              className={`btn h-12 w-12 rounded-full p-0 ${isCameraEnabled ? "border border-line bg-surface text-ink hover:bg-subtle" : "bg-warn-soft text-warn"}`}
+              className={`${ROUND} ${isCameraEnabled ? "bg-surface text-ink" : "!bg-[#b3301c] text-white"}`}
               title={isCameraEnabled ? "Turn camera off" : "Turn camera on"}
             >
               {isCameraEnabled ? <CameraIcon /> : <CameraOffIcon />}
@@ -377,7 +385,7 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
           <button
             onClick={() => setPanel(!panel)}
             aria-expanded={panel}
-            className="btn h-12 w-12 rounded-full border border-line bg-surface p-0 text-ink hover:bg-subtle"
+            className={`${ROUND} bg-surface text-ink`}
             title="Audio, language and subtitle settings"
           >
             <SettingsIcon />
@@ -386,13 +394,14 @@ export function ActiveCall({ code, session, mediaError, onClearError }: Props) {
           <button
             onClick={() => void toggleTranscript()}
             aria-pressed={iConsented}
-            className={`btn h-12 rounded-full px-4 ${recording.saving ? "bg-danger-soft text-danger" : iConsented ? "bg-warn-soft text-warn" : "border border-line bg-surface text-ink hover:bg-subtle"}`}
+            className={`${PILL} ${recording.saving ? "!border-danger bg-danger-soft text-danger" : iConsented ? "!border-warn bg-warn-soft text-warn" : "bg-surface text-ink"}`}
             title={`${recordWhat} to Meetings. Everyone in the call must agree. Press again to stop.`}
           >
-            {recording.saving ? "● Recording — stop" : iConsented ? `Waiting for ${otherName}` : othersAsked ? "Agree to record" : "Record call"}
+            <span className="hidden sm:inline">{recording.saving ? "● Recording — stop" : iConsented ? `Waiting for ${otherName}` : othersAsked ? "Agree to record" : "Record call"}</span>
+            <span className="sm:hidden">{recording.saving ? "● Stop" : iConsented ? "Waiting…" : othersAsked ? "Agree" : "Record"}</span>
           </button>
-          <button onClick={() => void endCall()} disabled={ending} className="btn-danger h-12 rounded-full px-6">
-            <PhoneOffIcon /> {ending ? "Ending…" : "End call"}
+          <button onClick={() => void endCall()} disabled={ending} className="btn-danger !h-14 px-5 whitespace-nowrap sm:px-7">
+            <PhoneOffIcon /> {ending ? "Ending…" : (<>End<span className="hidden sm:inline"> call</span></>)}
           </button>
         </div>
       </footer>
@@ -410,12 +419,12 @@ function limitMessage(reason: string): string {
 
 function Banner({ tone, children }: { tone: "warn" | "danger" | "info"; children: React.ReactNode }) {
   const styles = {
-    warn: "border-warn/30 bg-warn-soft text-warn",
-    danger: "border-danger/30 bg-danger-soft text-danger",
-    info: "border-brand/20 bg-brand-soft text-brand",
+    warn: "border-warn bg-warn-soft text-warn",
+    danger: "border-danger bg-danger-soft text-danger",
+    info: "border-brand bg-brand-soft text-brand",
   }[tone];
   return (
-    <div role="status" className={`rounded-xl border px-4 py-2.5 text-sm ${styles}`}>
+    <div role="status" className={`rounded-2xl border-2 px-4 py-2.5 text-sm font-semibold ${styles}`}>
       {children}
     </div>
   );
@@ -468,25 +477,45 @@ function PersonCard(props: {
   initial?: string;
 }) {
   const speaking = useIsSpeaking(props.participant);
+  const initial = (props.initial ?? props.title.slice(0, 1)).toUpperCase();
   return (
-    <div className={`card p-4 transition-shadow ${speaking ? "ring-2 ring-accent/40" : ""}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-brand-soft font-semibold text-brand">
-            {(props.initial ?? props.title.slice(0, 1)).toUpperCase()}
-          </div>
-          <div>
-            <div className="font-semibold">{props.title}</div>
-            <div className="text-xs text-muted">
-              Speaks {languageName(props.spoken)}
-              {props.listen && props.listen !== props.spoken ? ` · hears ${languageName(props.listen)}` : ""}
-            </div>
-          </div>
-        </div>
-        {props.muted && <span className="chip bg-warn-soft text-warn">Muted</span>}
+    <div className={`card flex items-center gap-4 p-4 transition duration-300 ${speaking ? "-rotate-1 !shadow-[5px_5px_0_#f5a623]" : ""}`}>
+      <div className="relative grid h-16 w-16 shrink-0 place-items-center">
+        {speaking && (
+          <>
+            <span className="absolute inset-0 animate-ping rounded-full border-2 border-edge opacity-50" />
+            <span className="absolute -inset-2 animate-ping rounded-full border-2 border-saffron [animation-delay:350ms]" />
+          </>
+        )}
+        <span
+          className={`relative grid h-16 w-16 place-items-center rounded-full border-[2.5px] border-edge text-[1.7rem] font-extrabold ${props.muted ? "bg-subtle text-muted" : "bg-saffron text-[#1c1712]"}`}
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {initial}
+        </span>
+        {props.muted && (
+          <span className="absolute -right-1 -bottom-1 grid h-6 w-6 place-items-center rounded-full border-2 border-edge bg-[#b3301c] text-white" title="Muted">
+            <MicOffIcon width={13} height={13} />
+          </span>
+        )}
       </div>
-      <div className="mt-3 h-5 text-xs text-muted">
-        {speaking ? <span className="text-accent">● Speaking</span> : props.activity && ACTIVITY_LABEL[props.activity]}
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-lg leading-tight font-bold">{props.title}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+          <span className="sr-only">Speaks {languageName(props.spoken)}</span>
+          <span aria-hidden="true" className={`sticker !py-0 text-[0.9rem] ${scriptFont(props.spoken)}`}>
+            {NATIVE_NAMES[props.spoken ?? ""] ?? languageName(props.spoken)}
+          </span>
+          {props.listen && props.listen !== props.spoken && (
+            <>
+              <span>hears</span>
+              <span className={`sticker !bg-mist !py-0 text-[0.9rem] ${scriptFont(props.listen)}`}>{NATIVE_NAMES[props.listen] ?? languageName(props.listen)}</span>
+            </>
+          )}
+        </div>
+        <div className="mt-1.5 h-5 text-xs font-semibold" aria-live="polite">
+          {speaking ? <span className="text-accent">● Speaking</span> : <span className="text-muted">{props.activity && ACTIVITY_LABEL[props.activity]}</span>}
+        </div>
       </div>
     </div>
   );
@@ -497,8 +526,16 @@ function Direction({ from, to, label }: { from?: string; to?: string; label: str
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-muted">{label}</span>
-      <span className="font-medium">
-        {same ? `${languageName(from)} (no translation)` : `${NATIVE_NAMES[from ?? ""] ?? from} → ${NATIVE_NAMES[to ?? ""] ?? to}`}
+      <span className="flex items-center gap-1.5 font-bold">
+        <span className={scriptFont(from)}>{NATIVE_NAMES[from ?? ""] ?? from}</span>
+        {same ? (
+          <span className="text-xs font-normal text-muted">(no translation)</span>
+        ) : (
+          <>
+            <span aria-hidden="true" className="text-neon">→</span>
+            <span className={scriptFont(to)}>{NATIVE_NAMES[to ?? ""] ?? to}</span>
+          </>
+        )}
       </span>
     </div>
   );
@@ -515,8 +552,11 @@ function RingingCard({ name, status, onCancel }: { name: string; status: string;
     ended: "Call ended",
   };
   return (
-    <div className="card p-4 text-center">
-      <div className="text-lg font-semibold">{name}</div>
+    <div className="card p-5 text-center">
+      <span className="mx-auto mb-3 grid h-14 w-14 animate-pulse-ring place-items-center rounded-full border-[2.5px] border-edge bg-saffron text-[#1c1712]">
+        <PhoneIcon width={24} height={24} />
+      </span>
+      <div className="page-title text-[1.5rem]">{name}</div>
       <p className={`mt-1 text-sm ${status === "ringing" || status === "answered" ? "text-muted" : "text-danger"}`} aria-live="polite">
         {text[status] ?? status}
       </p>
@@ -542,9 +582,9 @@ function InviteCard({ code, hasJoinedBefore, name }: { code: string; hasJoinedBe
       .catch(() => undefined);
   return (
     <div className="card p-4">
-      <div className="font-semibold">{hasJoinedBefore ? `Waiting for ${name ?? "the other person"} to connect…` : "Invite the other person"}</div>
+      <div className="page-title text-[1.4rem]">{hasJoinedBefore ? `Waiting for ${name ?? "the other person"}…` : "Invite the other person"}</div>
       <p className="mt-1 text-xs text-muted">Share this code or link. They need an account to join.</p>
-      <div className="mt-3 rounded-xl bg-subtle px-3 py-2 text-center font-mono text-xl tracking-[0.25em]">{code}</div>
+      <div className="mt-3 rounded-xl border-2 border-dashed border-edge bg-butter px-3 py-3 text-center font-mono text-2xl font-medium tracking-[0.25em] text-[#1c1712]">{code}</div>
       <button onClick={copy} className="btn-secondary mt-3 w-full">
         <CopyIcon width={16} height={16} /> {copied ? "Link copied" : "Copy invite link"}
       </button>
@@ -581,7 +621,7 @@ function SettingsPanel(props: {
   return (
     <div className="card grid gap-6 p-5 md:grid-cols-2">
       <div className="space-y-4">
-        <h2 className="font-semibold">Audio</h2>
+        <h2 className="page-title text-[1.35rem]">Audio</h2>
         <label className="block">
           <span className="label">Microphone</span>
           <select className="field" value={inputs.activeDeviceId} onChange={(e) => void inputs.setActiveMediaDevice(e.target.value)}>
@@ -616,14 +656,11 @@ function SettingsPanel(props: {
             className="w-full accent-[var(--color-brand)]"
           />
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={props.showSubtitles} onChange={(e) => props.setShowSubtitles(e.target.checked)} />
-          Show live subtitles
-        </label>
+        <Switch checked={props.showSubtitles} onChange={props.setShowSubtitles} title="Show live subtitles" />
         <p className="text-xs text-muted">Tip: headphones give the best translation quality and prevent echo.</p>
       </div>
       <div className="space-y-4">
-        <h2 className="font-semibold">Languages for this call</h2>
+        <h2 className="page-title text-[1.35rem]">Languages for this call</h2>
         <LanguagePicker value={sel} onChange={setSel} showVoice={false} />
         <button className="btn-secondary" onClick={() => void applyLanguages()}>
           Apply

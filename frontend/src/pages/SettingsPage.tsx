@@ -47,7 +47,7 @@ export function SettingsPage() {
 
   return (
     <Layout>
-      <h1 className="gradient-text text-3xl font-bold tracking-tight">Settings</h1>
+      <h1 className="page-title text-[clamp(2rem,4.5vw,2.8rem)]">Settings</h1>
       <PlanCard />
       <PhoneCard />
       <PasswordCard />
@@ -73,7 +73,7 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <h2 className="mt-10 text-lg font-semibold">Usage</h2>
+      <h2 className="page-title mt-10 text-[1.6rem]">Usage</h2>
       {usage ? (
         <div className="card mt-3 space-y-5 p-6">
           <p className="text-sm text-muted">
@@ -288,7 +288,7 @@ function PlanCard() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">Your plan</p>
-          <h2 className="mt-1 text-lg font-semibold text-ink">
+          <h2 className="page-title mt-1 text-[1.35rem]">
             {plan.name} <span className="text-sm font-normal text-muted">· ₹{plan.price_inr_month}/month</span>
           </h2>
           {plan.description && <p className="text-sm text-muted">{plan.description}</p>}

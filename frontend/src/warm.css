@@ -38,8 +38,12 @@
   --color-danger-soft: rgb(168 35 27 / 0.1);
   --color-accent: #0f6b5c;
   --color-accent-soft: rgb(15 107 92 / 0.1);
-  --color-neon: #1f2d6e;
+  --color-neon: #aa2f1b;
+  --color-neon-soft: rgb(214 64 42 / 0.12);
   --color-brand: #1f2d6e;
+  --color-brand-soft: rgb(31 45 110 / 0.1);
+  --color-edge: #1c1712;
+  --color-shadow: #1c1712;
 
   position: relative;
   isolation: isolate;
@@ -347,4 +351,16 @@ body.warm-body::after {
   .wm-draw, .wm-draw-view { stroke-dashoffset: 0; animation: none; transition: none; }
   .wm-marquee-track { animation: none; }
   .wm-spin, .wm-spin-slow, .wm-wobble, .wm-bob, .wm-bar, .wm-caret, .wm-wait span { animation: none; }
+}
+
+/* A globe that flies across while something is being translated. */
+@keyframes wm-fly {
+  0% { opacity: 0; transform: translate(calc(-50% - 9rem), -50%) rotate(0deg) scale(0.7); }
+  20% { opacity: 1; }
+  50% { transform: translate(-50%, calc(-50% - 1.4rem)) rotate(270deg) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + 9rem), -50%) rotate(540deg) scale(0.7); }
+}
+.wm-fly {
+  animation: wm-fly 1.3s cubic-bezier(0.45, 0.05, 0.35, 1) infinite;
 }

@@ -61,11 +61,20 @@ export function CallPage() {
   if (phase !== "connected" || !session) {
     return (
       <div className="flex min-h-full flex-col">
-        <header className="border-b border-line bg-surface px-4 py-4 sm:px-6">
+        <header className="border-b-[2.5px] border-edge bg-surface px-4 py-4 sm:px-6">
           <Brand />
         </header>
         <div className="mx-auto w-full max-w-md flex-1 px-4 py-16 text-center">
-          {phase === "loading" && <p className="text-sm text-muted">Connecting to the call…</p>}
+          {phase === "loading" && (
+            <div className="card mx-auto flex max-w-xs flex-col items-center gap-4 p-8">
+              <span className="flex h-10 items-end gap-1.5" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span key={i} className="wm-bar block w-2 rounded-full bg-saffron" style={{ height: "100%", ["--i" as string]: i }} />
+                ))}
+              </span>
+              <p className="page-title text-[1.4rem]">Connecting to the call…</p>
+            </div>
+          )}
           {phase === "error" && (
             <div className="space-y-4">
               <ErrorBanner message={error} />
@@ -76,7 +85,7 @@ export function CallPage() {
           )}
           {phase === "disconnected" && (
             <div className="card space-y-4 p-6">
-              <h1 className="text-lg font-semibold">You were disconnected</h1>
+              <h1 className="page-title text-[1.6rem]">You were disconnected</h1>
               <p className="text-sm text-muted">The connection to the call was lost. The call may still be running.</p>
               <div className="flex justify-center gap-3">
                 <button className="btn-primary" onClick={() => void fetchToken()}>

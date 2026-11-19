@@ -48,7 +48,7 @@ export function SummaryPage() {
 
   return (
     <Layout>
-      <h1 className="gradient-text text-3xl font-bold tracking-tight">Call summary</h1>
+      <h1 className="page-title text-[clamp(2rem,4.5vw,2.8rem)]">Call summary</h1>
       {error && <div className="mt-4"><ErrorBanner message={error} /></div>}
       {room && (
         <div className="mt-6 space-y-4">
@@ -58,7 +58,7 @@ export function SummaryPage() {
             <Stat label="Languages" value={room.participants.map((p) => languageName(p.spoken_language)).join(" ↔ ")} />
           </div>
           <div className="card p-6">
-            <h2 className="font-semibold">Participants</h2>
+            <h2 className="page-title text-[1.35rem]">Participants</h2>
             <ul className="mt-3 space-y-1 text-sm">
               {room.participants.map((p) => (
                 <li key={p.identity}>
@@ -69,7 +69,7 @@ export function SummaryPage() {
             </ul>
           </div>
           <div className="card p-6">
-            <h2 className="font-semibold">AI usage & measured latency</h2>
+            <h2 className="page-title text-[1.35rem]">AI usage & measured latency</h2>
             {!room.translation_enabled && <p className="mt-2 text-sm text-muted">Translation was off for this call.</p>}
             {room.translation_enabled && !usage && <p className="mt-2 text-sm text-muted">No usage was reported for this call.</p>}
             {usage && (

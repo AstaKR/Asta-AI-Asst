@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError, quickApi, type AICapabilities, type QuickResult } from "../api";
-import { CheckIcon, CopyIcon, MicIcon, PauseIcon, PlayIcon, SpeakerIcon, StopIcon, SwapIcon, TrashIcon } from "../components/Icons";
+import { scriptFont } from "../components/call/TableArt";
+import { CheckIcon, CopyIcon, GlobeIcon, MicIcon, PauseIcon, PlayIcon, SpeakerIcon, StopIcon, SwapIcon, TrashIcon } from "../components/Icons";
 import { ErrorBanner, Layout, PageHeader } from "../components/Layout";
 import { MEETING_LANGUAGES, pickRecorderFormat } from "../lib/meetings";
 
@@ -20,6 +21,26 @@ function LanguageSelect({ id, value, onChange, allowDetect }: { id: string; valu
         </option>
       ))}
     </select>
+  );
+}
+
+/** The swap button turns half a circle every time it is pressed. */
+function SwapButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  const [turns, setTurns] = useState(0);
+  return (
+    <button
+      type="button"
+      className="btn-secondary !h-11 !w-11 !p-0"
+      onClick={() => {
+        setTurns((t) => t + 1);
+        onClick();
+      }}
+      disabled={disabled}
+      aria-label="Swap languages"
+      title="Swap languages"
+    >
+      <SwapIcon className="transition-transform duration-500 ease-[cubic-bezier(0.3,1.4,0.5,1)]" style={{ transform: `rotate(${turns * 180}deg)` }} />
+    </button>
   );
 }
 
@@ -216,9 +237,7 @@ export function TranslatePage() {
           </label>
           <LanguageSelect id="from" value={source} onChange={setSource} allowDetect />
         </div>
-        <button type="button" className="btn-secondary h-[42px]" onClick={swap} disabled={source === "auto"} aria-label="Swap languages" title="Swap languages">
-          <SwapIcon />
-        </button>
+        <SwapButton onClick={swap} disabled={source === "auto"} />
         <div>
           <label className="label" htmlFor="to">
             To
@@ -227,10 +246,15 @@ export function TranslatePage() {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="relative mt-4 grid gap-4 lg:grid-cols-2">
+        {busy === "translate" && (
+          <span className="wm-fly pointer-events-none absolute top-1/2 left-1/2 z-10 hidden h-11 w-11 place-items-center rounded-full border-[2.5px] border-edge bg-chilli text-white shadow-[3px_3px_0_var(--color-shadow)] lg:grid" aria-hidden="true">
+            <GlobeIcon width={22} height={22} />
+          </span>
+        )}
         <section className="card flex flex-col p-4" aria-label="Original">
           <textarea
-            className="field min-h-48 flex-1 resize-y text-base"
+            className={`field min-h-48 flex-1 resize-y text-[1.2rem] leading-relaxed ${source === "ta" || source === "hi" ? scriptFont(source) : ""}`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={recording ? "Listening…" : "Type here, or press the microphone and speak"}
@@ -243,7 +267,7 @@ export function TranslatePage() {
             </button>
             {canRecord &&
               (recording ? (
-                <button className="btn-danger" onClick={() => recorder.current?.stop()}>
+                <button className="btn-danger animate-pulse-ring" onClick={() => recorder.current?.stop()}>
                   <StopIcon /> Stop · {seconds}s
                 </button>
               ) : (
@@ -263,13 +287,19 @@ export function TranslatePage() {
         </section>
 
         <section className="card flex flex-col p-4" aria-label="Translation" aria-live="polite" aria-busy={busy === "translate" || busy === "speech"}>
-          <div className="min-h-48 flex-1 rounded-xl bg-subtle px-3.5 py-2.5 text-base whitespace-pre-wrap" lang={result?.target_language}>
+          <div className="min-h-48 flex-1 rounded-2xl border-2 border-dashed border-edge/60 bg-subtle px-4 py-3 text-[1.35rem] leading-relaxed whitespace-pre-wrap" lang={result?.target_language}>
             {busy === "translate" || busy === "speech" ? (
-              <span className="text-muted">Working…</span>
+              <span className="wm-wait text-muted" role="status" aria-label="Working">
+                <span style={{ ["--i" as string]: 0 }} />
+                <span style={{ ["--i" as string]: 1 }} />
+                <span style={{ ["--i" as string]: 2 }} />
+              </span>
             ) : result?.translation ? (
-              result.translation
+              <span key={result.translation} className={`wm-pop block ${scriptFont(result.target_language)}`}>
+                {result.translation}
+              </span>
             ) : (
-              <span className="text-muted">The translation appears here.</span>
+              <span className="wm-hand text-[1.2rem] text-muted">The translation appears here.</span>
             )}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">

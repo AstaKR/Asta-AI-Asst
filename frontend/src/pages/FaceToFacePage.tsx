@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, quickApi, type QuickResult } from "../api";
+import { Switch } from "../components/call/Switch";
+import { scriptFont } from "../components/call/TableArt";
 import { MicIcon, SpeakerIcon, SwapIcon } from "../components/Icons";
 import { ErrorBanner, Layout, PageHeader } from "../components/Layout";
 import { pickRecorderFormat } from "../lib/meetings";
@@ -239,16 +241,17 @@ export function FaceToFacePage() {
     const active = recording === side;
     const lname = LANGS.find((l) => l.code === lang[side]);
     const name = lname?.name ?? "";
-    const accent = side === "a" ? "text-brand" : "text-accent";
-    const bar = side === "a" ? "bg-brand" : "bg-accent";
-    const ring = side === "a" ? "border-brand" : "border-accent";
+    // Two printed sides: saffron with ink, and indigo with cream.
+    const look =
+      side === "a"
+        ? { card: "!bg-saffron !text-[#1c1712]", chipOn: "border-[#1c1712] bg-[#1c1712] text-saffron", chipOff: "border-[#1c1712]/45 text-[#1c1712]/80 hover:text-[#1c1712]", mic: "border-[#1c1712] bg-[#1c1712] text-saffron", pill: "bg-[#1c1712]/10 text-[#1c1712]" }
+        : { card: "!bg-neel !text-jasmine", chipOn: "border-saffron bg-saffron text-[#1c1712]", chipOff: "border-jasmine/45 text-jasmine/85 hover:text-jasmine", mic: "border-saffron bg-saffron text-[#1c1712]", pill: "bg-jasmine/15 text-jasmine" };
     const hint = active ? "Listening… tap to send" : busy ? "Translating…" : mode === "auto" ? "Just speak, then pause" : "Tap on the mic to speak";
     return (
       <section
-        className={`card glow-border flex min-h-[340px] flex-1 flex-col overflow-hidden ${table && side === "a" ? "rotate-180" : ""}`}
+        className={`card flex min-h-[340px] flex-1 flex-col overflow-hidden ${look.card} ${table && side === "a" ? "rotate-180" : ""}`}
         aria-label={`${name} speaker`}
       >
-        <div className={`h-1 ${bar}`} />
         <div className="flex flex-1 flex-col gap-4 p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Language">
@@ -259,8 +262,8 @@ export function FaceToFacePage() {
                   aria-checked={lang[side] === l.code}
                   disabled={Boolean(recording) || busy || listening || l.code === lang[other(side)]}
                   onClick={() => setLang({ ...lang, [side]: l.code })}
-                  className={`rounded-full border px-3.5 py-1 text-sm font-semibold transition disabled:opacity-35 ${
-                    lang[side] === l.code ? `${ring} bg-subtle ${accent}` : "border-line text-muted hover:text-ink"
+                  className={`rounded-full border-2 px-4 py-1.5 text-[1.05rem] transition disabled:opacity-35 ${scriptFont(l.code)} ${
+                    lang[side] === l.code ? look.chipOn : look.chipOff
                   }`}
                 >
                   {l.native}
@@ -268,37 +271,37 @@ export function FaceToFacePage() {
               ))}
             </div>
             {last && !mine && (
-              <button className="btn-ghost h-10 w-10 shrink-0 rounded-full p-0" aria-label="Play translation again" title="Play again" onClick={() => void replay(last.result)}>
+              <button className="btn-ghost !h-11 !w-11 shrink-0 !rounded-full !p-0 !text-current" aria-label="Play translation again" title="Play again" onClick={() => void replay(last.result)}>
                 <SpeakerIcon width={22} height={22} />
               </button>
             )}
           </div>
           <div className="flex flex-1 items-center">
             {text ? (
-              <p className={`text-3xl leading-snug font-semibold sm:text-4xl ${mine ? accent : "text-ink"}`} aria-live="polite">
+              <p key={text} className={`wm-pop ${scriptFont(lang[side])} text-[2rem] leading-snug sm:text-[2.7rem] ${mine ? "italic opacity-80" : ""}`} aria-live="polite" lang={lang[side]}>
                 {text}
               </p>
             ) : (
-              <p className="text-lg text-muted">{mode === "auto" ? `Speak ${name} — the translation is spoken automatically.` : `Tap the mic and speak ${name}.`}</p>
+              <p className="wm-hand text-[1.25rem] opacity-80">{mode === "auto" ? `Speak ${name} — the translation is spoken automatically.` : `Tap the mic and speak ${name}.`}</p>
             )}
           </div>
           <div className="flex flex-col items-center gap-3">
             {mode === "tap" && (
               <div className="relative grid h-24 w-24 place-items-center">
-                {active && <span className="absolute inset-0 animate-ping rounded-full border-2 border-danger" />}
+                {active && <span className="absolute inset-0 animate-ping rounded-full border-2 border-current" />}
                 <button
                   onClick={() => toggleMic(side)}
                   disabled={Boolean(recording && !active) || busy || !format}
                   aria-label={active ? "Stop and translate" : `Tap to speak ${name}`}
-                  className={`relative grid h-20 w-20 select-none place-items-center rounded-full border-[3px] transition disabled:opacity-45 ${
-                    active ? "border-danger bg-danger text-white" : `${ring} bg-canvas ${accent} hover:shadow-(--shadow-glow)`
+                  className={`relative grid h-20 w-20 select-none place-items-center rounded-full border-[3px] shadow-[3px_3px_0_rgb(0_0_0/0.35)] transition disabled:opacity-45 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                    active ? "border-[#1c1712] bg-[#b3301c] text-white" : look.mic
                   }`}
                 >
                   <MicIcon width={32} height={32} />
                 </button>
               </div>
             )}
-            <p className="rounded-full border border-line bg-subtle px-4 py-1.5 text-sm text-muted">{hint}</p>
+            <p className={`rounded-full px-4 py-1.5 text-sm font-bold ${look.pill}`}>{hint}</p>
           </div>
         </div>
       </section>
@@ -312,14 +315,14 @@ export function FaceToFacePage() {
         title="Face to face"
         description="One device between two people. Each speaks their own language and hears the other in theirs."
         actions={
-          <div className="flex rounded-full border border-line p-1 text-sm" role="radiogroup" aria-label="Mode">
+          <div className="flex rounded-full border-2 border-edge bg-surface p-1 text-sm" role="radiogroup" aria-label="Mode">
             {(["tap", "auto"] as Mode[]).map((m) => (
               <button
                 key={m}
                 role="radio"
                 aria-checked={mode === m}
                 onClick={() => changeMode(m)}
-                className={`rounded-full px-4 py-1.5 font-semibold transition ${mode === m ? "bg-gradient-to-br from-brand to-neon text-[#050816]" : "text-muted hover:text-ink"}`}
+                className={`rounded-full border-2 px-4 py-1.5 font-bold transition ${mode === m ? "border-edge bg-saffron text-[#1c1712] shadow-[2px_2px_0_var(--color-shadow)]" : "border-transparent text-muted hover:text-ink"}`}
               >
                 {m === "tap" ? "Tap to talk" : "Hands-free"}
               </button>
@@ -334,8 +337,8 @@ export function FaceToFacePage() {
         {half("a")}
         <div className="flex items-center justify-center">
           <button
-            className="btn-ghost h-10 w-10 rounded-full p-0"
-            title="Swap languages"
+            className="btn-secondary !h-11 !w-11 !p-0"
+            title="Swap languages" aria-label="Swap languages"
             disabled={Boolean(recording) || busy || listening}
             onClick={() => setLang({ a: lang.b, b: lang.a })}
           >
@@ -351,7 +354,7 @@ export function FaceToFacePage() {
             <MicIcon width={18} height={18} /> {listening ? "Stop listening" : "Start listening"}
           </button>
           <div className="min-w-[160px] flex-1">
-            <div className="h-2 overflow-hidden rounded-full bg-subtle" aria-hidden>
+            <div className="h-3 overflow-hidden rounded-full border-2 border-edge bg-subtle" aria-hidden>
               <div className={`h-full transition-[width] ${recording ? "bg-danger" : "bg-accent"}`} style={{ width: `${Math.max(0, Math.min(100, (level + 70) * 1.6))}%` }} />
             </div>
             <p className="mt-1 text-xs text-muted" aria-live="polite">
@@ -361,13 +364,13 @@ export function FaceToFacePage() {
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={speak} onChange={(e) => setSpeak(e.target.checked)} /> Speak translations aloud
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={table} onChange={(e) => setTable(e.target.checked)} /> Device lies flat between us (turn the top side around)
-        </label>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <Switch checked={speak} onChange={setSpeak} title="Speak translations aloud" icon={<SpeakerIcon width={20} height={20} />}>
+          The translation is played in the other person's language.
+        </Switch>
+        <Switch checked={table} onChange={setTable} title="Device lies flat between us" icon={<SwapIcon width={20} height={20} />}>
+          Turns the top side around so both people can read it.
+        </Switch>
       </div>
       <p className="mt-3 text-xs text-muted">Hands-free works best in a quiet place with one person speaking at a time. Nothing you say is stored.</p>
     </Layout>

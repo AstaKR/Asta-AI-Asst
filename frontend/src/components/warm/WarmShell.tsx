@@ -1,9 +1,3 @@
-import "@fontsource-variable/fraunces/full.css";
-import "@fontsource-variable/instrument-sans/index.css";
-import "@fontsource/kalam/400.css";
-import "@fontsource/kalam/700.css";
-import "@fontsource/tiro-tamil/400.css";
-import "@fontsource/tiro-devanagari-hindi/400.css";
 
 import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";

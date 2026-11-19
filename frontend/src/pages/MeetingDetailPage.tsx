@@ -102,7 +102,7 @@ export function MeetingDetailPage() {
       </Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="gradient-text text-3xl font-bold tracking-tight">{meeting.title}</h1>
+          <h1 className="page-title text-[clamp(2rem,4.5vw,2.8rem)]">{meeting.title}</h1>
           <p className="mt-1 text-sm text-muted">
             {new Date(meeting.recorded_at).toLocaleString()} · {formatClock(meeting.duration_seconds * 1000)} ·{" "}
             {meetingLanguageName(meeting.spoken_language)}
@@ -166,7 +166,7 @@ export function MeetingDetailPage() {
             />
           )}
           <section className="card space-y-3 p-5">
-            <h2 className="font-semibold">Translation</h2>
+            <h2 className="page-title text-[1.35rem]">Translation</h2>
             <div className="flex gap-2">
               <select className="field" value={translateTo} onChange={(e) => setTranslateTo(e.target.value)} aria-label="Translate into">
                 <option value="">Translate transcript into…</option>
@@ -183,7 +183,7 @@ export function MeetingDetailPage() {
             <p className="text-xs text-muted">Original text is kept; the translation is stored separately. Uses Sarvam translation credits.</p>
           </section>
           <section className="card space-y-2 p-5 text-sm">
-            <h2 className="font-semibold">Details</h2>
+            <h2 className="page-title text-[1.35rem]">Details</h2>
             <p className="text-muted">
               Speech recognised {Math.round(meeting.stt_seconds)} s · translated {meeting.translate_chars} chars
               {meeting.audio_original_name && ` · file ${meeting.audio_original_name}`}

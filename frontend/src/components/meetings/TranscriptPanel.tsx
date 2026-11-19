@@ -27,7 +27,7 @@ export function TranscriptPanel({ meetingId, segments, translationLanguage, acti
   return (
     <section className="card flex flex-col" aria-label="Transcript">
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
-        <h2 className="font-semibold">Transcript</h2>
+        <h2 className="page-title text-[1.35rem]">Transcript</h2>
         <span className="text-xs text-muted">{segments.length} segments</span>
         <div className="flex-1" />
         <label className="flex items-center gap-1.5 text-xs text-muted">
@@ -93,7 +93,7 @@ function SegmentRow({
   }
 
   return (
-    <div ref={ref} className={`grid gap-2 px-5 py-3 text-sm md:gap-4 ${twoColumns ? "md:grid-cols-[84px_1fr_1fr]" : "md:grid-cols-[84px_1fr]"} ${active ? "bg-brand-soft" : ""}`}>
+    <div ref={ref} className={`grid gap-2 px-5 py-3 text-sm md:gap-4 ${twoColumns ? "md:grid-cols-[84px_1fr_1fr]" : "md:grid-cols-[84px_1fr]"} ${active ? "bg-saffron/25" : ""}`}>
       <button className="self-start text-left font-mono text-xs text-brand hover:underline" onClick={() => onSeek(seg.start_ms)} title="Play from here">
         {formatClock(seg.start_ms)}
         {seg.speaker && <span className="block font-sans text-muted">{seg.speaker}</span>}

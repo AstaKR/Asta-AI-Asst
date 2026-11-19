@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import type { LanguageSelection } from "../api";
 import { LANGUAGE_NAMES, NATIVE_NAMES } from "../lib/languages";
+import { scriptFont } from "./call/TableArt";
+import { CheckIcon } from "./Icons";
 
 const VOICES = ["shubh", "aditya", "rahul", "rohan", "amit", "ritu", "priya", "neha", "pooja", "kavya"];
 
@@ -24,7 +26,7 @@ export function LanguagePicker({ value, onChange, showVoice = true }: Props) {
         <fieldset>
           <legend className="label">Your language</legend>
           <p className="mb-3 text-sm text-muted">You will speak in this language and hear the other person translated into it.</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {codes.map((code) => {
               const active = value.spoken_language === code;
               return (
@@ -33,12 +35,17 @@ export function LanguagePicker({ value, onChange, showVoice = true }: Props) {
                   key={code}
                   aria-pressed={active}
                   onClick={() => onChange({ ...value, spoken_language: code, listen_language: code })}
-                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${
-                    active ? "border-brand bg-brand-soft ring-2 ring-brand/15" : "border-line bg-surface hover:border-line"
+                  className={`relative rounded-2xl border-[2.5px] border-edge px-4 py-3 text-left transition duration-200 ${
+                    active ? "-rotate-1 bg-saffron text-[#1c1712] shadow-[4px_4px_0_var(--color-shadow)]" : "bg-surface hover:-translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-shadow)]"
                   }`}
                 >
-                  <div className="text-base font-semibold">{NATIVE_NAMES[code]}</div>
-                  <div className="text-xs text-muted">{LANGUAGE_NAMES[code]}</div>
+                  <div className={`text-[1.55rem] leading-tight ${scriptFont(code)}`}>{NATIVE_NAMES[code]}</div>
+                  <div className={`text-xs font-semibold ${active ? "" : "text-muted"}`}>{LANGUAGE_NAMES[code]}</div>
+                  {active && (
+                    <span className="wm-pop absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full border-2 border-edge bg-[#1c1712] text-saffron" aria-hidden="true">
+                      <CheckIcon width={14} height={14} strokeWidth={3} />
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -70,7 +77,7 @@ export function LanguagePicker({ value, onChange, showVoice = true }: Props) {
       )}
       <button
         type="button"
-        className="text-sm font-medium text-brand hover:underline"
+        className="text-sm font-bold text-brand underline decoration-2 underline-offset-4 hover:decoration-saffron"
         onClick={() => {
           if (split) onChange({ ...value, listen_language: value.spoken_language });
           setSplit(!split);
@@ -89,7 +96,7 @@ export function LanguagePicker({ value, onChange, showVoice = true }: Props) {
               </option>
             ))}
           </select>
-          <span className="mt-1 block text-xs text-muted">The other person hears your words in this synthetic voice.</span>
+          <span className="mt-1.5 block text-xs text-muted">The other person hears your words in this synthetic voice.</span>
         </label>
       )}
     </div>

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ApiError, meetingsApi, type MeetingFilters } from "../api";
+import { PlusIcon } from "../components/Icons";
 import { ErrorBanner, Layout } from "../components/Layout";
 import { AskMeetings } from "../components/meetings/AskMeetings";
+import { Reveal } from "../components/warm/Reveal";
 import { MEETING_LANGUAGES, formatClock, isProcessing, meetingLanguageName } from "../lib/meetings";
 import type { MeetingListItem, Paginated } from "../types";
 
@@ -19,6 +21,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const SOURCE_LABEL: Record<string, string> = { upload: "Upload", recording: "Recording", live: "Live", call: "Call" };
+// Notebook cover colour by where the meeting came from.
+const COVER: Record<string, string> = { live: "bg-saffron", recording: "bg-mist", upload: "bg-blush", call: "bg-butter" };
+const TILT = [-0.7, 0.5, -0.3, 0.8, -0.5, 0.3];
 
 export function MeetingsPage() {
   const [filters, setFilters] = useState<MeetingFilters>({ page: 1 });
@@ -54,10 +59,13 @@ export function MeetingsPage() {
 
   return (
     <Layout wide>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="gradient-text text-3xl font-bold tracking-tight">Meetings</h1>
-        <Link to="/meetings/new" className="btn-primary">
-          New meeting
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow mb-1.5">Your notebooks</p>
+          <h1 className="page-title text-[clamp(2.2rem,5vw,3.2rem)]">Meetings</h1>
+        </div>
+        <Link to="/meetings/new" className="btn-primary !min-h-12">
+          <PlusIcon width={18} height={18} /> New meeting
         </Link>
       </div>
       <AskMeetings />
@@ -89,39 +97,65 @@ export function MeetingsPage() {
           <ErrorBanner message={error} />
         </div>
       )}
-      <ul className="card mt-4 divide-y divide-line">
-        {data && data.results.length === 0 && <li className="px-5 py-10 text-center text-sm text-muted">No meetings found.</li>}
-        {data?.results.map((m) => (
-          <li key={m.id}>
-            <Link to={`/meetings/${m.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 hover:bg-subtle">
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{m.title}</div>
-                <div className="text-xs text-muted">
-                  {new Date(m.recorded_at).toLocaleString()} · {formatClock(m.duration_seconds * 1000)} · {SOURCE_LABEL[m.source]} ·{" "}
-                  {meetingLanguageName(m.spoken_language)}
-                  {m.translation_language && ` → ${meetingLanguageName(m.translation_language)}`}
-                </div>
-              </div>
-              {m.has_summary && <span className="chip bg-brand-soft text-brand">Notes</span>}
-              <span
-                className={`chip ${m.status === "failed" ? "bg-danger-soft text-danger" : isProcessing(m.status) || m.status === "live" ? "bg-warn-soft text-warn" : "bg-accent-soft text-accent"}`}
-              >
-                {STATUS_LABEL[m.status]}
-                {isProcessing(m.status) && m.progress > 0 && ` ${m.progress}%`}
-              </span>
-            </Link>
-          </li>
-        ))}
+
+      {data && data.results.length === 0 && (
+        <div className="mt-10 text-center">
+          <p className="page-title text-[1.8rem]">No notebooks on the shelf yet.</p>
+          <p className="wm-hand mt-2 text-[1.2rem] text-muted">Start a meeting and its transcript and notes will land here.</p>
+        </div>
+      )}
+      <ul className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {data?.results.map((m, i) => {
+          const busy = isProcessing(m.status) || m.status === "live";
+          return (
+            <li key={m.id}>
+              <Reveal delay={(i % 3) * 70} tilt={TILT[i % TILT.length]}>
+                <Link
+                  to={`/meetings/${m.id}`}
+                  className="card card-hover relative flex h-full overflow-hidden !rounded-2xl !p-0 hover:!rotate-0"
+                  style={{ rotate: `${TILT[i % TILT.length]}deg` }}
+                >
+                  {/* the binding */}
+                  <span className="flex w-8 shrink-0 flex-col items-center justify-evenly border-r-2 border-edge bg-subtle py-3" aria-hidden="true">
+                    {[0, 1, 2, 3, 4].map((d) => (
+                      <span key={d} className="h-3 w-3 rounded-full border-2 border-edge bg-canvas" />
+                    ))}
+                  </span>
+                  <div className={`flex min-w-0 flex-1 flex-col gap-2 p-4 text-[#1c1712] ${COVER[m.source] ?? "bg-surface"}`}>
+                    {m.has_summary && <span className="absolute -top-1 right-5 h-8 w-4 bg-chilli [clip-path:polygon(0_0,100%_0,100%_100%,50%_75%,0_100%)]" title="Has notes" aria-label="Has notes" />}
+                    <h2 className="page-title pr-6 text-[1.3rem] leading-tight">{m.title}</h2>
+                    <p className="text-xs leading-snug opacity-80">
+                      {new Date(m.recorded_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })} · {formatClock(m.duration_seconds * 1000)} · {SOURCE_LABEL[m.source]}
+                    </p>
+                    <p className="text-xs font-semibold">
+                      {meetingLanguageName(m.spoken_language)}
+                      {m.translation_language && ` → ${meetingLanguageName(m.translation_language)}`}
+                    </p>
+                    <div className="mt-auto pt-2">
+                      <span
+                        className={`chip !bg-surface ${m.status === "failed" ? "!text-danger" : busy ? "!text-warn" : "!text-accent"}`}
+                      >
+                        {busy && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />}
+                        {STATUS_LABEL[m.status]}
+                        {isProcessing(m.status) && m.progress > 0 && ` ${m.progress}%`}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </Reveal>
+            </li>
+          );
+        })}
       </ul>
       {data && data.count > 20 && (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button className="btn-secondary py-1.5" disabled={!data.previous} onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}>
+        <div className="mt-8 flex items-center justify-center gap-3 text-sm">
+          <button className="btn-secondary" disabled={!data.previous} onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}>
             Previous
           </button>
-          <span>
+          <span className="font-bold">
             Page {filters.page} of {pages}
           </span>
-          <button className="btn-secondary py-1.5" disabled={!data.next} onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}>
+          <button className="btn-secondary" disabled={!data.next} onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}>
             Next
           </button>
         </div>

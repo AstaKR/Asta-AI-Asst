@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
 
+import { Star } from "../warm/Marquee";
+
 /**
- * Glowing orb that reacts to the real microphone level: the core swells and three rings ripple outward as people
- * talk. The level is written straight to the elements (no React re-render per frame).
+ * A "mic sun" that reacts to the real microphone level: the saffron core swells, a star of light behind it brightens
+ * and dashed rings ripple outward as people talk. The level is written straight to the elements (no React re-render
+ * per frame).
  */
 export function MicOrb({ stream, paused = false }: { stream: MediaStream | null; paused?: boolean }) {
   const core = useRef<HTMLDivElement | null>(null);
@@ -30,7 +33,10 @@ export function MicOrb({ stream, paused = false }: { stream: MediaStream | null;
       level += (target - level) * 0.25; // ease so it breathes instead of flickering
       const k = reduce ? 0 : level;
       if (core.current) core.current.style.transform = `scale(${1 + k * 0.28})`;
-      if (glow.current) glow.current.style.opacity = String(0.35 + k * 0.65);
+      if (glow.current) {
+        glow.current.style.opacity = String(0.45 + k * 0.55);
+        glow.current.style.transform = `scale(${1 + k * 0.18})`;
+      }
       rings.current.forEach((r, i) => {
         if (!r) return;
         r.style.transform = `scale(${1 + k * (0.35 + i * 0.22)})`;
@@ -47,29 +53,28 @@ export function MicOrb({ stream, paused = false }: { stream: MediaStream | null;
 
   return (
     <div className="relative mx-auto grid aspect-square w-full max-w-[220px] place-items-center" aria-hidden="true">
-      <div
-        ref={glow}
-        className="absolute inset-[-10%] rounded-full bg-[radial-gradient(circle,rgb(138_123_255/0.6),rgb(39_227_255/0.2)_55%,transparent_72%)] opacity-40 blur-2xl"
-      />
+      <div ref={glow} className="absolute inset-[-14%] opacity-50 transition-transform duration-75">
+        <Star className="wm-spin-slow h-full w-full text-saffron/70" />
+      </div>
       {[0, 1, 2].map((i) => (
         <div
           key={i}
           ref={(el) => {
             rings.current[i] = el;
           }}
-          className="absolute inset-[14%] rounded-full border border-neon/50 opacity-0"
+          className="absolute inset-[14%] rounded-full border-2 border-dashed border-edge opacity-0"
         />
       ))}
       <div
         ref={core}
-        className="relative grid h-[58%] w-[58%] place-items-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_30%_25%,rgb(255_255_255/0.25),rgb(138_123_255/0.45)_42%,rgb(6_8_30/0.92)_82%)] shadow-[0_0_60px_-6px_rgb(138_123_255/0.85),inset_0_0_28px_rgb(39_227_255/0.3)] transition-transform duration-75"
+        className="relative grid h-[58%] w-[58%] place-items-center rounded-full border-[2.5px] border-edge bg-saffron shadow-[4px_4px_0_var(--color-shadow)] transition-transform duration-75"
       >
         <div className="flex h-1/3 items-center gap-[3px]">
           {Array.from({ length: 9 }, (_, i) => (
             <span
               key={i}
               style={{ animationDelay: `${(i * 0.11) % 1}s`, animationDuration: `${0.8 + ((i * 5) % 4) * 0.14}s` }}
-              className={`h-full w-[3px] origin-center rounded-full bg-gradient-to-b from-neon to-brand ${paused ? "scale-y-[0.25]" : "animate-wave"}`}
+              className={`h-full w-[3px] origin-center rounded-full bg-[#1c1712] ${paused ? "scale-y-[0.25]" : "animate-wave"}`}
             />
           ))}
         </div>

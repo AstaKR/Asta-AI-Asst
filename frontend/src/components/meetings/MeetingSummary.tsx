@@ -34,7 +34,7 @@ export function MeetingSummary({ meeting, config, pending, onRequested, onSeek, 
   return (
     <section className="card space-y-5 p-5" aria-label="Meeting notes">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="font-semibold">AI meeting notes</h2>
+        <h2 className="page-title text-[1.35rem]">AI meeting notes</h2>
         <div className="flex-1" />
         <select className="field w-36 py-1.5" value={language} onChange={(e) => setLanguage(e.target.value as typeof language)} aria-label="Notes language">
           {MEETING_LANGUAGES.map((l) => (
@@ -60,7 +60,7 @@ export function MeetingSummary({ meeting, config, pending, onRequested, onSeek, 
           <NoteList title="Key discussion points" items={notes.key_points} onCite={(i) => onSeek(startOf(i))} />
           <NoteList title="Decisions" items={notes.decisions} onCite={(i) => onSeek(startOf(i))} empty="No explicit decisions were recorded." />
           <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">Action items</h3>
+            <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-neon">Action items</h3>
             {meeting.action_items.length === 0 && <p className="text-sm text-muted">No action items were stated.</p>}
             <ul className="space-y-2">
               {meeting.action_items.map((item) => (
@@ -96,7 +96,7 @@ function Cites({ refs, onCite }: { refs: number[]; onCite: (index: number) => vo
 function NoteList({ title, items, onCite, empty }: { title: string; items: NotePoint[]; onCite: (i: number) => void; empty?: string }) {
   return (
     <div>
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">{title}</h3>
+      <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-neon">{title}</h3>
       {items.length === 0 ? (
         <p className="text-sm text-muted">{empty ?? "None."}</p>
       ) : (

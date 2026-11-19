@@ -30,7 +30,7 @@ export function AskMeetings() {
 
   return (
     <section className="card glow-border mt-6 p-5" aria-label="Ask your meetings">
-      <p className="eyebrow">// recall</p>
+      <p className="eyebrow">Recall</p>
       <form
         className="mt-2 flex gap-2"
         onSubmit={(e) => {

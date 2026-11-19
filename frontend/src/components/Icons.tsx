@@ -182,3 +182,19 @@ export const ConversationIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3 5h11v8H8l-3 3v-3H3zM10 16v1h6l3 3v-3h2V9h-4" />
   </svg>
 );
+export const HomeIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5" />
+  </svg>
+);
+export const PlusIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+export const ClockIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+);
