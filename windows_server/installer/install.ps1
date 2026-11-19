@@ -26,9 +26,9 @@ if (-not $isAdmin -and -not $TestMode) {
     exit
 }
 
-if (-not $Unattended) { $Host.UI.RawUI.WindowTitle = "Installing ASTA Server" }
+if (-not $Unattended) { $Host.UI.RawUI.WindowTitle = "Installing Asta Talk Server" }
 Write-Host ""
-Write-Host "  ASTA Server setup" -ForegroundColor Cyan
+Write-Host "  Asta Talk Server setup" -ForegroundColor Cyan
 Write-Host "  -----------------"
 
 try {
@@ -121,8 +121,8 @@ try {
     }
 
     Write-Host ""
-    Write-Host "  ASTA Server $version is installed." -ForegroundColor Green
-    Write-Host "  In the ASTA Server window: create the administrator account and add the AI keys."
+    Write-Host "  Asta Talk Server $version is installed." -ForegroundColor Green
+    Write-Host "  In the Asta Talk Server window: create the administrator account and add the AI keys."
     if (-not $TestMode -and -not $Unattended) { Start-Sleep -Seconds 4 }
     exit 0
 }

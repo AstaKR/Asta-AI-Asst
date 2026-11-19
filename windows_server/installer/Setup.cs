@@ -1,4 +1,4 @@
-// ASTA Server Setup.exe: a small window that unpacks the files appended to this exe and runs install.ps1.
+// Asta Talk Server Setup.exe: a small window that unpacks the files appended to this exe and runs install.ps1.
 // Built by windows_server\build.py with the .NET Framework C# compiler that ships with Windows (C# 5).
 // Layout at the end of the exe: [payload.zip][install.ps1][int64 zipLen][int64 ps1Len]["ASTASETP"]
 using System;
@@ -9,8 +9,8 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: System.Reflection.AssemblyTitle("ASTA Server Setup")]
-[assembly: System.Reflection.AssemblyProduct("ASTA Server")]
+[assembly: System.Reflection.AssemblyTitle("Asta Talk Server Setup")]
+[assembly: System.Reflection.AssemblyProduct("Asta Talk Server")]
 [assembly: System.Reflection.AssemblyCompany("LevelUp Systems")]
 
 class Setup : Form
@@ -35,7 +35,7 @@ class Setup : Form
 
     Setup()
     {
-        Text = "ASTA Server " + Version + " Setup";
+        Text = "Asta Talk Server " + Version + " Setup";
         Font = new Font("Segoe UI", 9.5f);
         ClientSize = new Size(560, 400);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -43,7 +43,7 @@ class Setup : Form
         StartPosition = FormStartPosition.CenterScreen;
         try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
-        var title = new Label { Text = "ASTA Server", Font = new Font("Segoe UI", 16f, FontStyle.Bold), AutoSize = true, Location = new Point(20, 16) };
+        var title = new Label { Text = "Asta Talk Server", Font = new Font("Segoe UI", 16f, FontStyle.Bold), AutoSize = true, Location = new Point(20, 16) };
         var intro = new Label
         {
             Text = "Installs the translator server for your office: website, phone app connection, calls and meetings. "
@@ -161,7 +161,7 @@ class Setup : Form
         Ui(delegate
         {
             bar.Value = ok ? 100 : bar.Value;
-            status.Text = ok ? "ASTA Server is installed and running. Use the ASTA Server window to finish setup."
+            status.Text = ok ? "Asta Talk Server is installed and running. Use the Asta Talk Server window to finish setup."
                              : "Installation failed. See the messages above.";
             status.ForeColor = ok ? Color.FromArgb(6, 118, 71) : Color.FromArgb(180, 35, 24);
             install.Text = "Close";

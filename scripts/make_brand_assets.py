@@ -19,13 +19,15 @@ WEB_PUBLIC = REPO / "frontend" / "public"
 NAME = "Asta Talk"
 SS = 4  # supersampling for the mark
 
-# ---- colours (the app's own aurora palette) ----
-INK = "#eef1fb"
-CANVAS = "#070b1a"
-TEAL = "#35e0c0"
-WHITE = "#ffffff"
-BG_STOPS = [(0.0, "#7c6cf5"), (0.55, "#5445e0"), (1.0, "#281c7a")]
-ADAPTIVE_BG = "#3b2eb0"  # android backgroundColor fallback (mid of the gradient)
+# ---- colours (the "chai stall" palette the web and phone apps use) ----
+INK = "#1c1712"  # wordmark and the A
+CANVAS = "#f5ecdc"  # paper
+TEAL = "#fffaf0"  # the waveform bars (cream on the saffron tile); the name is kept from the old palette
+WHITE = "#1c1712"  # the A itself (ink); the name is kept from the old palette
+CHILLI = "#c2371f"
+MUTED = "#5a5046"
+BG_STOPS = [(0.0, "#ffbd4a"), (0.55, "#f5a623"), (1.0, "#e08a00")]
+ADAPTIVE_BG = "#f5a623"  # android backgroundColor fallback
 
 # ---- geometry, in a 1024 x 1024 space ----
 APEX, FOOT_L, FOOT_R = (512, 226), (246, 798), (778, 798)
@@ -130,7 +132,7 @@ def write_svgs() -> None:
     )
     (BRAND / "asta-mark.svg").write_text(f"{head}{svg_mark_group(1.0, WHITE, TEAL)}</svg>\n", encoding="utf-8")
     # mark for light backgrounds (A in the deep violet, waveform in the stronger teal)
-    (BRAND / "asta-mark-light.svg").write_text(f"{head}{svg_mark_group(1.0, '#281c7a', '#0f9c85')}</svg>\n", encoding="utf-8")
+    (BRAND / "asta-mark-light.svg").write_text(f"{head}{svg_mark_group(1.0, INK, CHILLI)}</svg>\n", encoding="utf-8")
     WEB_PUBLIC.mkdir(parents=True, exist_ok=True)
     (WEB_PUBLIC / "favicon.svg").write_text(
         f'{head}{svg_gradient_defs()}<rect width="1024" height="1024" rx="{CORNER}" fill="url(#bg)"/>{svg_mark_group(0.9, WHITE, TEAL)}</svg>\n',
@@ -140,7 +142,7 @@ def write_svgs() -> None:
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 400" role="img" aria-label="{NAME}">'
         f'<rect width="1500" height="400" fill="{CANVAS}"/>'
         f'<g transform="translate(48 48) scale(0.3)">{svg_gradient_defs()}<rect width="1024" height="1024" rx="{CORNER}" fill="url(#bg)"/>{svg_mark_group(0.86, WHITE, TEAL)}</g>'
-        f'<text x="400" y="262" font-family="Segoe UI, Inter, Helvetica, Arial, sans-serif" font-size="190" font-weight="700" fill="{INK}">Asta <tspan fill="{TEAL}">Talk</tspan></text></svg>\n'
+        f'<text x="400" y="262" font-family="Segoe UI, Inter, Helvetica, Arial, sans-serif" font-size="190" font-weight="700" fill="{INK}">Asta <tspan fill="{CHILLI}">Talk</tspan></text></svg>\n'
     )
     (BRAND / "asta-lockup.svg").write_text(word, encoding="utf-8")
 
@@ -152,7 +154,7 @@ def lockup_png(width: int = 1500) -> Image.Image:
     font = ImageFont.truetype(r"C:\Windows\Fonts\segoeuib.ttf", 190)
     d = ImageDraw.Draw(img)
     d.text((400, 262), "Asta ", font=font, fill=INK, anchor="ls")
-    d.text((400 + d.textlength("Asta ", font=font), 262), "Talk", font=font, fill=TEAL, anchor="ls")
+    d.text((400 + d.textlength("Asta ", font=font), 262), "Talk", font=font, fill=CHILLI, anchor="ls")
     return img
 
 
@@ -183,33 +185,33 @@ def preview_sheet() -> Image.Image:
     d.text((48, 440), "App icon and how Android masks it", font=fb, fill=INK)
     x = 48
     sheet.alpha_composite(icon(256, rounded=True), (x, 490))
-    d.text((x, 760), "Icon", font=f, fill="#a3adc7")
+    d.text((x, 760), "Icon", font=f, fill=MUTED)
     x += 296
     for name in ("circle", "squircle", "rounded"):
         sheet.alpha_composite(adaptive_preview(name), (x, 490 + 20))
-        d.text((x, 760), name.capitalize(), font=f, fill="#a3adc7")
+        d.text((x, 760), name.capitalize(), font=f, fill=MUTED)
         x += 256
     # monochrome (themed icons) on a light tile
-    tile = Image.new("RGBA", (216, 216), "#e9e6ff")
-    mono = draw_mark(216, 0.78, "#2b2358", "#2b2358")
+    tile = Image.new("RGBA", (216, 216), "#ecdfc6")
+    mono = draw_mark(216, 0.78, INK, INK)
     tile.alpha_composite(mono)
     tm = Image.new("L", (216 * SS, 216 * SS), 0)
     ImageDraw.Draw(tm).rounded_rectangle([0, 0, 216 * SS - 1, 216 * SS - 1], radius=int(216 * SS * 0.34), fill=255)
     tile.putalpha(tm.resize((216, 216), Image.LANCZOS))
     sheet.alpha_composite(tile, (x, 510))
-    d.text((x, 760), "Themed (mono)", font=f, fill="#a3adc7")
+    d.text((x, 760), "Themed (mono)", font=f, fill=MUTED)
 
     d.text((48, 810), "Small sizes", font=fb, fill=INK)
     x = 48
     for s in (96, 64, 48, 32, 24):
         sheet.alpha_composite(icon(s, rounded=True), (x, 860))
-        d.text((x, 860 + s + 6), str(s), font=f, fill="#a3adc7")
+        d.text((x, 860 + s + 6), str(s), font=f, fill=MUTED)
         x += s + 40
     # light background lockup mark
-    light = Image.new("RGBA", (320, 120), "#ffffff")
-    light.alpha_composite(draw_mark(120, 1.0, "#281c7a", "#0f9c85"), (0, 0))
+    light = Image.new("RGBA", (320, 120), "#fffaf0")
+    light.alpha_composite(draw_mark(120, 1.0, INK, CHILLI), (0, 0))
     ld = ImageDraw.Draw(light)
-    ld.text((130, 78), NAME, font=ImageFont.truetype(r"C:\Windows\Fonts\segoeuib.ttf", 40), fill="#281c7a", anchor="ls")
+    ld.text((130, 78), NAME, font=ImageFont.truetype(r"C:\Windows\Fonts\segoeuib.ttf", 40), fill=INK, anchor="ls")
     sheet.alpha_composite(light, (1060, 840))
     return sheet
 

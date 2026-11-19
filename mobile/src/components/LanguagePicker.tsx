@@ -2,7 +2,7 @@ import { Pressable, Text, View } from "react-native";
 
 import type { LanguageSelection } from "../api";
 import { LANGUAGE_NAMES, NATIVE_NAMES } from "../lib/languages";
-import { colors, styles } from "./ui";
+import { colors, fonts, styles } from "./ui";
 
 const CODES = Object.keys(LANGUAGE_NAMES);
 
@@ -22,15 +22,15 @@ export function LanguagePicker({ value, onChange }: { value: LanguageSelection; 
               onPress={() => onChange({ ...value, spoken_language: code, listen_language: code })}
               style={{
                 flex: 1,
-                borderWidth: active ? 2 : 1,
-                borderColor: active ? colors.brand : colors.line,
-                backgroundColor: active ? colors.brandSoft : colors.surface,
+                borderWidth: 2,
+                borderColor: active ? colors.ink : colors.line,
+                backgroundColor: active ? colors.saffron : colors.surface,
                 borderRadius: 12,
                 paddingVertical: 12,
                 alignItems: "center",
               }}
             >
-              <Text style={{ fontSize: 17, fontWeight: "700", color: colors.ink }}>{NATIVE_NAMES[code]}</Text>
+              <Text style={{ fontSize: 17, fontFamily: fonts.sansBold, color: colors.ink }}>{NATIVE_NAMES[code]}</Text>
               <Text style={{ fontSize: 12, color: colors.muted }}>{LANGUAGE_NAMES[code]}</Text>
             </Pressable>
           );

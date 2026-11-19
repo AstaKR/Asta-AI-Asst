@@ -104,7 +104,7 @@ def network_is_public() -> bool:
 class Manager(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title(f"ASTA Server {VERSION}")
+        self.title(f"Asta Talk Server {VERSION}")
         self.minsize(720, 640)
         try:
             ttk.Style(self).theme_use("vista")
@@ -229,7 +229,7 @@ class Manager(tk.Tk):
         host = self.host.get().strip()
         port = self.port.get().strip()
         if not port.isdigit() or not 1 <= int(port) <= 65535:
-            messagebox.showerror("ASTA Server", "Port must be a number between 1 and 65535.")
+            messagebox.showerror("Asta Talk Server", "Port must be a number between 1 and 65535.")
             return None
         changes = {"ASTA_PUBLIC_HOST": "" if host.lower() in ("", "automatic") else host.rstrip("/"), "ASTA_WEB_PORT": port}
         changes.update({k: e.get().strip() for k, e in self.key_entries.items()})
@@ -323,7 +323,7 @@ class Manager(tk.Tk):
     def _toggle_autostart(self):
         flag = "/ENABLE" if self.autostart.get() else "/DISABLE"
         if run(["schtasks", "/Change", "/TN", paths.TASK_NAME, flag]).returncode != 0:
-            messagebox.showerror("ASTA Server", "Could not change the start-up setting.")
+            messagebox.showerror("Asta Talk Server", "Could not change the start-up setting.")
 
     def after_idle_result(self, fn):
         """Runs fn on the Tk thread (widgets must only be read there) and returns its result."""

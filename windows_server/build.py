@@ -1,4 +1,4 @@
-"""Builds the Windows server installer:  windows_server\\dist\\ASTA-Server-Setup-<version>.exe
+"""Builds the Windows server installer:  windows_server\\dist\\AstaTalk-Server-Setup-<version>.exe
 
     .venv\\Scripts\\python.exe windows_server\\build.py
 
@@ -172,7 +172,7 @@ def package() -> Path:
 
     step("Attaching the files to Setup.exe")
     DIST.mkdir(exist_ok=True)
-    target = DIST / f"ASTA-Server-Setup-{VERSION}.exe"
+    target = DIST / f"AstaTalk-Server-Setup-{VERSION}.exe"
     ps1 = (HERE / "installer" / "install.ps1").read_bytes()
     with target.open("wb") as out:
         out.write(stub.read_bytes())

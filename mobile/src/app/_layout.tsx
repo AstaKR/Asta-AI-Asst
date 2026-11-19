@@ -1,18 +1,25 @@
+import { Fraunces_700Bold, Fraunces_900Black } from "@expo-google-fonts/fraunces";
+import { InstrumentSans_500Medium, InstrumentSans_700Bold } from "@expo-google-fonts/instrument-sans";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { View } from "react-native";
 
 import { AuthProvider } from "../auth";
-import { colors } from "../components/ui";
+import { colors, fonts } from "../components/ui";
 
 export default function RootLayout() {
+  const [loaded, failed] = useFonts({ Fraunces_700Bold, Fraunces_900Black, InstrumentSans_500Medium, InstrumentSans_700Bold });
+  // Hold the first frame until the fonts are ready (they ship inside the app, so this is instant); carry on if they fail.
+  if (!loaded && !failed) return <View style={{ flex: 1, backgroundColor: colors.canvas }} />;
   return (
     <AuthProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.surface },
+          headerStyle: { backgroundColor: colors.canvas },
           headerTintColor: colors.ink,
-          headerTitleStyle: { fontWeight: "700" },
+          headerTitleStyle: { fontFamily: fonts.display, fontSize: 20, color: colors.ink },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.canvas },
         }}

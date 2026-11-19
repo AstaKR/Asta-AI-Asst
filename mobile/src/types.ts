@@ -296,3 +296,19 @@ export interface MyPlan {
   plans: Plan[];
   payments: boolean;
 }
+
+/** A saved person in the phonebook, with the languages you use together. */
+export interface Contact {
+  id: number;
+  name: string;
+  /** The username or mobile number that was typed when saving. */
+  target: string;
+  username: string;
+  spoken_language: string;
+  listen_language: string;
+  voice: string;
+  favorite: boolean;
+  call_count: number;
+  last_called_at: string | null;
+  created_at: string;
+}

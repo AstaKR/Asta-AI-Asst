@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 
-import { colors, type IconName } from "../../components/ui";
+import { colors, fonts, type IconName } from "../../components/ui";
 
 const TABS: { name: string; title: string; icon: IconName; iconActive: IconName }[] = [
   { name: "home", title: "Calls", icon: "call-outline", iconActive: "call" },
@@ -15,14 +15,14 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
+        headerStyle: { backgroundColor: colors.canvas },
         headerShadowVisible: false,
         headerTintColor: colors.ink,
-        headerTitleStyle: { fontWeight: "700", fontSize: 20 },
-        tabBarActiveTintColor: colors.brand,
+        headerTitleStyle: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
+        tabBarActiveTintColor: colors.chilliText,
         tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, height: 64, paddingTop: 6, paddingBottom: 8 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.ink, borderTopWidth: 2.5, height: 66, paddingTop: 6, paddingBottom: 8 },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.sansBold },
         sceneStyle: { backgroundColor: colors.canvas },
       }}
     >

@@ -1,7 +1,7 @@
 import { Pressable, Switch, Text, View } from "react-native";
 
 import { MEETING_LANGUAGES } from "../lib/meetings";
-import { Field, colors, styles } from "./ui";
+import { Field, colors, fonts, styles } from "./ui";
 
 export interface MeetingSetupValue {
   title: string;
@@ -33,12 +33,12 @@ function Chips({ options, value, onChange }: { options: { code: string; label: s
               paddingHorizontal: 14,
               paddingVertical: 9,
               borderRadius: 999,
-              borderWidth: active ? 2 : 1,
-              borderColor: active ? colors.brand : colors.line,
-              backgroundColor: active ? colors.brandSoft : colors.surface,
+              borderWidth: 2,
+              borderColor: active ? colors.ink : colors.line,
+              backgroundColor: active ? colors.saffron : colors.surface,
             }}
           >
-            <Text style={{ fontWeight: "600", color: active ? colors.brand : colors.ink }}>{o.label}</Text>
+            <Text style={{ fontFamily: fonts.sansBold, color: colors.ink }}>{o.label}</Text>
           </Pressable>
         );
       })}

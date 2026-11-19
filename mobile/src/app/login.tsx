@@ -1,11 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 import { ApiError, api } from "../api";
 import { useAuth } from "../auth";
 import { getApiUrl } from "../config";
-import { Banner, Button, Card, Field, colors, Muted, Screen, Title } from "../components/ui";
+import { Banner, Button, Card, Field, colors, fonts, Muted, Screen, Title } from "../components/ui";
 
 type Mode = "login" | "register" | "reset";
 
@@ -55,11 +55,17 @@ export default function Login() {
     }, "Something went wrong");
 
   const isLogin = mode === "login";
-  const link = { color: colors.brand, textAlign: "center" as const };
+  const link = { color: colors.brand, textAlign: "center" as const, fontFamily: fonts.sansBold, textDecorationLine: "underline" as const };
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Screen>
         <ScrollView keyboardShouldPersistTaps="handled">
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18, marginTop: 4 }}>
+            <Image source={require("../../assets/icon.png")} style={{ width: 54, height: 54, borderRadius: 16, borderWidth: 2.5, borderColor: colors.ink }} accessibilityIgnoresInvertColors />
+            <Text style={{ fontSize: 32, fontFamily: fonts.displayBlack, color: colors.ink }}>
+              Asta <Text style={{ color: colors.chilliText }}>Talk</Text>
+            </Text>
+          </View>
           <Title>{isLogin ? "Sign in" : mode === "register" ? "Create your account" : "Reset your password"}</Title>
           <Muted style={{ marginBottom: 16 }}>Use the same username and password as on the website.</Muted>
           {notice ? <Banner tone="info">{notice}</Banner> : null}

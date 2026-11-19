@@ -10,7 +10,7 @@ call translator and meeting processing. Phones connect with the APK's **Server s
 .venv\Scripts\python.exe windows_server\build.py --package-only   # only redo the zip + Setup.exe
 ```
 
-Output: `windows_server\dist\ASTA-Server-Setup-<version>.exe` (about 245 MB). Version: `asta_server/__init__.py`.
+Output: `windows_server\dist\AstaTalk-Server-Setup-<version>.exe` (about 245 MB). Version: `asta_server/__init__.py`.
 Needs Node (web app), internet for pip the first time, and `tools\livekit\livekit-server.exe`. Setup.exe is
 compiled from `installer\Setup.cs` with the C# compiler that ships with Windows; the files are appended to it.
 

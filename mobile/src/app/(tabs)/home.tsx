@@ -6,7 +6,7 @@ import { ApiError, api, phoneApi, type LanguageSelection } from "../../api";
 import { useAuth } from "../../auth";
 import { IncomingCalls } from "../../components/IncomingCalls";
 import { LanguagePicker } from "../../components/LanguagePicker";
-import { Banner, Button, Card, Field, ListItem, Muted, Screen, SectionHeader, colors } from "../../components/ui";
+import { Banner, Button, Card, Field, ListItem, Muted, Screen, SectionHeader, colors, fonts } from "../../components/ui";
 import { languageName } from "../../lib/languages";
 import type { Room } from "../../types";
 
@@ -66,7 +66,7 @@ export default function Home() {
   return (
     <Screen style={{ padding: 0 }}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: colors.ink }}>Hello{name ? `, ${name.split(" ")[0]}` : ""}</Text>
+        <Text style={{ fontSize: 32, fontFamily: fonts.displayBlack, color: colors.ink, lineHeight: 38 }}>Hello{name ? `, ${name.split(" ")[0]}` : ""}.</Text>
         <Muted style={{ marginBottom: 16 }}>Talk to anyone in Tamil, Hindi or English — translated live.</Muted>
         {error ? <Banner tone="danger">{error}</Banner> : null}
         <IncomingCalls phoneEnabled={phoneEnabled} />
@@ -87,7 +87,7 @@ export default function Home() {
             value={code}
             onChangeText={setCode}
             maxLength={12}
-            style={{ letterSpacing: 3, fontWeight: "600" }}
+            style={{ letterSpacing: 3, fontFamily: fonts.sansBold }}
           />
           <Button label="Join call" icon="enter-outline" variant="secondary" onPress={join} disabled={!code.trim() || busy} />
         </Card>

@@ -307,7 +307,7 @@ function NotesTab(props: {
         <Pressable
           key={l.code}
           onPress={() => onPick(l.code)}
-          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: value === l.code ? colors.brand : colors.line, backgroundColor: value === l.code ? colors.brandSoft : colors.surface }}
+          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 2, borderColor: value === l.code ? colors.ink : colors.line, backgroundColor: value === l.code ? colors.saffron : colors.surface }}
         >
           <Text style={{ fontWeight: "600", color: value === l.code ? colors.brand : colors.ink }}>{l.name}</Text>
         </Pressable>

@@ -3,10 +3,10 @@
     "name": "Asta Talk",
     "slug": "asta-ai-transuator",
     "scheme": "aicalltranslator",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aicalltranslator.app",
@@ -27,7 +27,7 @@
     "android": {
       "package": "com.aicalltranslator.app",
       "adaptiveIcon": {
-        "backgroundColor": "#3b2eb0",
+        "backgroundColor": "#f5a623",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
